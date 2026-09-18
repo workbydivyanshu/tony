@@ -391,3 +391,11 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - Teardown: mission artifacts = evidence; probe exited clean; no procs.
 
 
+## P14 — packaging: systemd + notify (2026-09-18 ~21:30)
+- Plan: lib/packaging.py (unit_text pure builder + install via systemctl --user, no sudo) + daemon.notify() (notify-send, best-effort, fires on every run_once completion) + --install-daemon flag.
+- GREEN: suite 161/161 (158 + 3 test_packaging incl. fake-runner notify hook).
+- LIVE PROOF: unit written ~/.config/systemd/user/tony-daemon.service, is-enabled=enabled, is-active=active(running), Linger=yes already on -> daemon survives logout+reboot. notify path proven live (desktop pulse + journalctl 'Started tony-daemon.service').
+- Hermes-map: ALWAYS-ON closed. Tony is now a resident, auto-started, self-notifying agent on free models.
+- Teardown: daemon left running INTENTIONALLY (it's the product now); no other residue.
+
+

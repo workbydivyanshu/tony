@@ -482,6 +482,7 @@ def main(argv=None) -> int:
     p.add_argument("--mcp-status", action="store_true", help="list MCP servers delegates inherit via opencode")
     p.add_argument("--skills", action="store_true", help="list discovered skills from ~/.tony/skills")
     p.add_argument("--research", metavar="TOPIC", default=None, help="deep-research fan-out: 3 parallel explorers (websearch MCP) -> cited synthesis -> critic gate")
+    p.add_argument("--install-daemon", action="store_true", help="write + enable the systemd user unit (tony --daemon at login, no sudo)")
     p.add_argument("--remember", metavar="FACT", default=None, help="append one dated fact to ~/.tony/memory/MEMORY.md")
     p.add_argument("--recall", metavar="QUERY", nargs="?", const="", default=None, help="print memory lines matching QUERY (or all when bare)")
     p.add_argument("--forget", metavar="SUBSTR", default=None, help="remove memory lines containing SUBSTR")
@@ -555,6 +556,15 @@ def main(argv=None) -> int:
         return cmd_daemon(args.inbox, interval=args.interval, once=args.daemon_once,
                           parallel=args.parallel, max_verify=args.max_verify,
                           keep_going=args.keep_going, timeout=args.timeout)
+    if args.install_daemon:
+        from lib import packaging
+        res = packaging.install()
+        print(f"tony: unit {res['unit_path']}")
+        if res["enabled"]:
+            print("tony: daemon enabled + started (systemctl --user)")
+            return 0
+        print(f"tony: enable FAILED: {res.get('error', 'unknown')}")
+        return 1
     if args.research:
         return cmd_research(args.research, timeout=args.timeout)
     if args.skills:

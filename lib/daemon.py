@@ -15,6 +15,17 @@ import time
 CLAIMED_SUFFIX = ".claimed"
 
 
+def notify(title: str, body: str, run=None) -> None:
+    """Desktop pulse on mission completion (terminal-native, no TTS).
+    Best-effort: silently no-ops when notify-send is missing (headless)."""
+    try:
+        import subprocess
+        run = run or subprocess.run
+        run(["notify-send", "-a", "tony", title, body], capture_output=True, timeout=5)
+    except Exception:
+        pass
+
+
 def inbox_dir(home: str | None = None) -> str:
     base = home or os.path.expanduser("~")
     return os.path.join(base, ".tony", "inbox")
@@ -92,6 +103,7 @@ def run_once(inbox: str, mission_fn, home: str | None = None) -> dict | None:
         os.remove(claimed)
     except OSError:
         pass
+    notify("tony: " + stem, f"mission {status} — report: {rpath}")
     return {"name": stem, "status": status, "report_path": rpath}
 
 
