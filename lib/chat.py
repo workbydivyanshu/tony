@@ -60,7 +60,8 @@ def load(session: str, home: str | None = None) -> list:
 
 def build_prompt(message: str, history: list | None = None,
                  memory_lines: list | None = None,
-                 mcp_servers: list | None = None) -> str:
+                 mcp_servers: list | None = None,
+                 matched_skills: list | None = None) -> str:
     """Assemble the conversational prompt: memory + recent history + current message."""
     parts = ["You are Tony, a concise helpful assistant. Reply directly, no preamble."]
     if memory_lines:
@@ -71,6 +72,9 @@ def build_prompt(message: str, history: list | None = None,
         parts.append("Conversation so far:\n" + convo)
     if mcp_servers:
         parts.append("Available MCP tools (via opencode): " + ", ".join(mcp_servers))
+    if matched_skills:
+        from . import skills as skills_mod
+        parts = [skills_mod.inject_prompt(parts[0], matched_skills)] + parts[1:]
     parts.append("user: " + (message or "").strip())
     return "\n\n".join(parts) + "\n"
 

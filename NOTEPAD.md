@@ -398,4 +398,12 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - Hermes-map: ALWAYS-ON closed. Tony is now a resident, auto-started, self-notifying agent on free models.
 - Teardown: daemon left running INTENTIONALLY (it's the product now); no other residue.
 
+## P15 — strict critic verdict + chat skills (2026-09-18 ~22:10)
+- Plan: lib/critic_verdict.py (first-hit parse — transcript-contamination proof) + research critic gate unification + research boulder persisted BEFORE critic + chat skills injection.
+- THE FIND (live, sed-vs-awk proof #1): critic's own verdict VERDICT: ISSUES was flipped to PASS by my last-hit parse — the transcript after the critic's message contained stale 'Verdict: PASS' text from NOTEPAD.md the critic had READ. False 100/100. Also found: cmd_research never saved the boulder (critic reviewed a ghost — its ISSUES was legitimate). Also: grep -c counts LINES not URL occurrences (my '27 URLs' claims were inflated; real check = re.findall count).
+- Re-proof #2 (same topic, fresh): ISSUES caught -> fix ran (60s) -> fix's brief had only 1 real URL -> wave refused (1/2) -> RESEARCH SCORE 80/100 honest. No false scoring anywhere in the chain.
+- GREEN: 165/165 (163 + test_verdict_first_hit_beats_transcript + chat skills). cmd_mission already strict (P5b critic_gate_detail); only research had the heuristic — now unified.
+- Teardown: proof artifacts kept as evidence; no procs.
+
+
 

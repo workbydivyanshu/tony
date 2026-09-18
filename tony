@@ -165,9 +165,11 @@ def cmd_chat(session, timeout: int = 600) -> int:
         return eng.sanitize(res["output"]).strip() or "(empty reply)"
 
     def _build(msg: str, hist: list) -> str:
+        from lib import skills as skills_mod
         return chat_mod.build_prompt(msg, hist,
                                      memory_lines=mem_mod.recall(limit=20),
-                                     mcp_servers=mcp.names())
+                                     mcp_servers=mcp.names(),
+                                     matched_skills=skills_mod.match(msg, skills_mod.discover()))
 
     chat_mod.repl(name, input_fn=lambda p: input(p), output_fn=print,
                   call_fn=_live, prompt_builder=_build)
@@ -235,12 +237,21 @@ def cmd_research(topic: str, timeout: int = 900) -> int:
     with open(report_path, "w") as f:
         f.write(eng.sanitize(syn["output"]))
 
-    gate = "PASS"
+    b = boulder.new(f"research: {topic[:60]}")
+    boulder.add_todo(b, "fan-out explorers via websearch MCP")
+    boulder.add_todo(b, "synthesized cited brief")
+    boulder.log(b, f"explorers ok {ok_n}/{len(prompts)}; brief -> {report_path}")
+    boulder.save(slug, b)  # critic must find a real boulder on disk (P15 find)
+
     crit = eng.role_call("critic", assignments["critic"],
-                         roles.critic_prompt(open(report_path).read()
-                                             + "\nTOPIC: " + topic), workdir,
+                         roles.critic_prompt(
+                             f"BOULDER: ~/.tony/boulders/{slug}.md\n"
+                             f"BRIEF UNDER REVIEW: {report_path}\n\n"
+                             + open(report_path).read()), workdir,
                          timeout=timeout)
-    if crit["status"] == "ok" and "ISSUES" in eng.sanitize(crit["output"])[:400]:
+    gate = "PASS"
+    from lib import critic_verdict as cv
+    if crit["status"] != "ok" or cv.is_issues(eng.sanitize(crit["output"])):
         gate = "ISSUES"
         fix = eng.role_call("researcher", assignments["researcher"],
                             "The critic flagged issues in the brief at "
@@ -255,11 +266,12 @@ def cmd_research(topic: str, timeout: int = 900) -> int:
 
     results_wave = [subprocess.run(c, shell=True, capture_output=True).returncode == 0
                     for c in res_mod.wave_cmds(report_path)]
-    b = boulder.new(f"research: {topic[:60]}")
-    boulder.add_todo(b, "fan-out explorers"); b["todos"][0]["box"] = ok_n > 0
-    boulder.add_todo(b, "synthesis brief"); b["todos"][1]["box"] = syn["status"] == "ok"
+    b["todos"][0]["box"] = ok_n > 0
+    b["todos"][1]["box"] = syn["status"] == "ok"
     boulder.add_wave(b, "report exists"); b["wave"][0]["box"] = results_wave[0]
     boulder.add_wave(b, ">=3 cited URLs"); b["wave"][1]["box"] = results_wave[1]
+    boulder.log(b, f"critic gate {gate}; wave {sum(results_wave)}/2")
+    boulder.save(slug, b)
     score = score_mod.compute(b, gate)["score"]
     rp = rep.write(os.path.expanduser("~/.fleet/out"), slug, f"research: {topic}",
                    assignments, b, score,
