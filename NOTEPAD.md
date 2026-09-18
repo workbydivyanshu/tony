@@ -320,3 +320,15 @@ Teardown: suite uses fake runners + echo/false only; no procs.
 - C2: keyless grep zero hits (lib/tony/tests); zero opencode/<id> literals in lib (patterns only, by design)
 - C3: --models 7 live + role map; --status JSON valid with mcp key (5 servers); --mcp-status 5 connected
 - C4: tagging v0.2 now. No live model burn (P6 proved MCP-use live 80/100; re-burn adds no evidence).
+
+## P8 (v0.3 memory layer — Hermes-replacement step 1) — plan (2026-09-18)
+Tier: LIGHT (stdlib file-append + 3 CLI flags + prompt injection point; no plan file -> self-review).
+Goal: Tony gains a persistent self across missions: ~/.tony/memory/MEMORY.md append-only, recall/forget, architect sees top memories.
+Why this slice first: daemon/chat/scheduler are useless without memory; memory is testable with zero model burn.
+Criteria:
+- C1: lib/memory.py remember/recall/forget round-trip (dated line, query filter, substring forget) — test with temp HOME
+- C2: CLI --remember/--recall/--forget/--memory wired live (round-trip a probe fact, then remove it)
+- C3: architect_prompt gains optional memory lines (planner-aware, like MCP names) — test asserts facts in prompt
+- C4: suite all green + keyless clean + zero hardcoded model IDs
+SURFACE: live CLI round-trip on real ~/.tony/memory. No live model burn (memory proven at seam + live CLI IO).
+Teardown: tests use temp HOME dirs; live probe fact forgotten after proof; no procs.

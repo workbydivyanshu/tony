@@ -12,7 +12,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import boulder, catalog, config, mcp, roles, score as score_mod, tiers, watch  # noqa: E402
+from lib import boulder, catalog, config, mcp, memory as mem_mod, roles, score as score_mod, tiers, watch  # noqa: E402
 
 VERSION = "0.1.0-p1"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
@@ -116,6 +116,38 @@ def cmd_mcp_status(_args) -> int:
     return 0
 
 
+def cmd_remember(fact: str) -> int:
+    try:
+        p = mem_mod.remember(fact)
+    except ValueError as e:
+        print(f"tony: --remember: {e}", file=sys.stderr)
+        return 2
+    print(f"tony: remembered -> {p}")
+    return 0
+
+
+def cmd_recall(query) -> int:
+    lines = mem_mod.recall(query if query else None)
+    if not lines:
+        print("tony: memory empty" + (f" (no match for {query!r})" if query else ""))
+        return 0
+    for ln in lines:
+        print(ln)
+    return 0
+
+
+def cmd_forget(substr: str) -> int:
+    n = mem_mod.forget(substr)
+    print(f"tony: forgot {n} line(s) matching {substr!r}")
+    return 0
+
+
+def cmd_memory(_args) -> int:
+    p = mem_mod.mem_path()
+    print(f"tony: memory file: {p}")
+    return cmd_recall(None)
+
+
 def slugify(mission: str) -> str:
     import re
     slug = re.sub(r"[^a-z0-9]+", "-", mission.lower()).strip("-")[:48]
@@ -150,7 +182,8 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     print(f"tony: mission '{mission[:80]}' -> slug {slug}")
     print(f"tony: architect = {assignments['architect']}")
     arch = eng.role_call("architect", assignments["architect"],
-                         roles.architect_prompt(mission, mcp.names()), workdir,
+                         roles.architect_prompt(mission, mcp.names(),
+                                                mem_mod.recall(limit=20)), workdir,
                          timeout=timeout)
     print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
     if arch["status"] != "ok":
@@ -317,6 +350,10 @@ def main(argv=None) -> int:
     p.add_argument("--models", action="store_true", help="print live catalog + role assignments")
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + mcp + boulders")
     p.add_argument("--mcp-status", action="store_true", help="list MCP servers delegates inherit via opencode")
+    p.add_argument("--remember", metavar="FACT", default=None, help="append one dated fact to ~/.tony/memory/MEMORY.md")
+    p.add_argument("--recall", metavar="QUERY", nargs="?", const="", default=None, help="print memory lines matching QUERY (or all when bare)")
+    p.add_argument("--forget", metavar="SUBSTR", default=None, help="remove memory lines containing SUBSTR")
+    p.add_argument("--memory", action="store_true", help="print memory file path + full dump")
     p.add_argument("--dry-run", metavar="MISSION", default=None, help="plan only, write boulder, execute nothing")
     p.add_argument("--parallel", action="store_true", help="run [role:explorer] TODOs concurrently via threads")
     p.add_argument("--max-verify", metavar="N", type=int, default=3, help="total wave attempts (default 3); fixes run between attempts only")
@@ -379,6 +416,14 @@ def main(argv=None) -> int:
                           keep_going=args.keep_going, timeout=args.timeout)
     if args.mcp_status:
         return cmd_mcp_status(args)
+    if args.remember:
+        return cmd_remember(args.remember)
+    if args.recall is not None:
+        return cmd_recall(args.recall or None)
+    if args.forget:
+        return cmd_forget(args.forget)
+    if args.memory:
+        return cmd_memory(args)
     if args.status:
         return cmd_status(args)
     if args.dry_run:
