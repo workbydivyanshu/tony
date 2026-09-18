@@ -12,7 +12,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import boulder, catalog, config, roles, score as score_mod, tiers, watch  # noqa: E402
+from lib import boulder, catalog, config, mcp, roles, score as score_mod, tiers, watch  # noqa: E402
 
 VERSION = "0.1.0-p1"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
@@ -98,8 +98,21 @@ def cmd_status(_args) -> int:
         "catalog": models,
         "tiers": tmap,
         "roles": roles,
+        "mcp": mcp.names(),
         "boulders": open_boulders(),
     }, indent=2))
+    return 0
+
+
+def cmd_mcp_status(_args) -> int:
+    servers = mcp.live_servers()
+    if not servers:
+        print("tony: no MCP servers reachable (`opencode mcp list` empty/failed)")
+        return 1
+    print(f"tony {VERSION} — MCP servers via opencode ({len(servers)}):")
+    for s in servers:
+        mark = "connected" if s["connected"] else "UNREACHABLE"
+        print(f"  {s['name']:12s} {mark}")
     return 0
 
 
@@ -137,7 +150,7 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     print(f"tony: mission '{mission[:80]}' -> slug {slug}")
     print(f"tony: architect = {assignments['architect']}")
     arch = eng.role_call("architect", assignments["architect"],
-                         roles.architect_prompt(mission), workdir,
+                         roles.architect_prompt(mission, mcp.names()), workdir,
                          timeout=timeout)
     print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
     if arch["status"] != "ok":
@@ -302,7 +315,8 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="tony", description="free-model-native agent CLI")
     p.add_argument("--version", action="store_true")
     p.add_argument("--models", action="store_true", help="print live catalog + role assignments")
-    p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + boulders")
+    p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + mcp + boulders")
+    p.add_argument("--mcp-status", action="store_true", help="list MCP servers delegates inherit via opencode")
     p.add_argument("--dry-run", metavar="MISSION", default=None, help="plan only, write boulder, execute nothing")
     p.add_argument("--parallel", action="store_true", help="run [role:explorer] TODOs concurrently via threads")
     p.add_argument("--max-verify", metavar="N", type=int, default=3, help="total wave attempts (default 3); fixes run between attempts only")
@@ -363,6 +377,8 @@ def main(argv=None) -> int:
     if args.resume:
         return cmd_resume(args.resume, parallel=args.parallel, max_verify=args.max_verify,
                           keep_going=args.keep_going, timeout=args.timeout)
+    if args.mcp_status:
+        return cmd_mcp_status(args)
     if args.status:
         return cmd_status(args)
     if args.dry_run:

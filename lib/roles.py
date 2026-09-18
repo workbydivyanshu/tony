@@ -57,5 +57,9 @@ def critic_prompt(boulder_markdown: str) -> str:
     return f"{CRITIC_SYSTEM}\nBOULDER:\n{boulder_markdown}\n"
 
 
-def architect_prompt(mission: str) -> str:
-    return f"{ARCHITECT_SYSTEM}\nMISSION:\n{mission}\n"
+def architect_prompt(mission: str, mcp_servers: list | None = None) -> str:
+    base = f"{ARCHITECT_SYSTEM}\nMISSION:\n{mission}\n"
+    if mcp_servers:
+        base += ("\nAvailable MCP tools (via opencode, use them in TODOs where they fit): "
+                 + ", ".join(mcp_servers) + "\n")
+    return base
