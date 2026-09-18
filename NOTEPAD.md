@@ -228,6 +228,17 @@ P5d done. Tree at P5d landing commit.
 - F3: --status live ✓; config json.tool N/A (no ~/.tony/config.json yet — defaults active, correct state). F4: keyless grep clean (no api_key/Authorization/Bearer in lib/tony/tests); no literal opencode/<id> in lib (only "opencode/" prefix filter in catalog.py:16 + tier regex patterns in tiers.py:10-11 — patterns, not IDs, by design).
 - Next: --parallel e2e live proof (P5a deferred payoff) + plan-gates triage.
 
+## PAR2 VERDICT — parallel re-proof GREEN (2026-09-18 ~16:05)
+- Mission: fresh-dir par2, --parallel. Result: 4/4 TODOs, 2/2 wave, MISSION SCORE 80/100.
+- Parser fix proven: 4 tagged TODOs parsed (par1 managed 1 garbage fallback TODO). No fallback blob.
+- Parallel overlap proven live: runs.log explorer rows 15:54:26 (28.8s) + 15:55:21 (84.5s), both started ~15:53:57 post-architect — threaded batch overlapped. Workdir holds 02-explorer.md + 03-explorer.md.
+- Critic ISSUES -> 07-builder fix -> wave 2/2 green. The full loop (plan/execute/critique/fix/verify) ran as designed. 20 pts off = honest critic-gate deduction, not a defect.
+- hello-par2.txt: 12B PARALLEL2 OK + newline, F1 EXISTS + F2 CONTENT_OK live.
+
+## BACKLOG TRIAGE (closes the todo)
+- Plan-gates: IMPLEMENTED (lib/plangate.py — TTY y/N confirm, --yes bypass, headless proceeds with honest log line; 5 tests in test_plangate.py; par2 boulder shows "plan-gate skipped (non-TTY headless)"). Not backlog — done.
+- --slug flag: intentionally absent. slugify() always derives (tony:106-109). Acceptable per prior note; no action.
+
 ## P-next plan (appended) — plan-gate omO-style + F3/F4 scripture wave
 Tier: LIGHT (lib/plangate.py pure helper + 1 CLI flag + gate call; no plan file -> self-review).
 Goal: close the last auditor-confirmed gap (no pre-execution approval). After architect plans, before ANY builder call, TTY missions pause for y/N unless --yes; headless (non-TTY) proceeds with honest log (never hang a pipe).
@@ -245,3 +256,9 @@ Teardown: fake input_fn only; per-test tmpdirs removed; no procs.
 - GREEN: 136/136 (131 prior unmodified + 5 new test_plangate.py). C1 --yes never prompts; C2 non-TTY proceeds+logs (no hang); C3 y/yes proceeds, empty/n declines; C4 declined -> boulder saved, exit 2, zero builder calls by construction (gate sits before run_loop)
 - SURFACE LIVE: --help shows --yes; F3 --status JSON valid; F4 keyless grep zero hits; --models 7 live (prior run)
 - Auditor gaps closed: --once/--interval confirmed wired via watch sub-parser (tony:316-325); --slug still absent by design (slugify); plan-gate was the last real gap — now shut.
+
+## par1 --parallel e2e verdict (2026-09-18 15:42–15:50) — 90/100
+- Wave 4/4 PASS after 1 fix cycle (F2 newline diff failed first, builder fix added trailing newline, re-run green). Fix loop proven live.
+- BUT parallel-overlap NOT proven: boulder shows 1 mangled TODO (`- [x] # Boulder: tony-parallel-recon` + raw block truncated at `## Final V` = clean[:400] fallback). Root cause: old _ITEM regex couldn't parse architect's `- [role:X] [ ]` lines → parse()=0 todos → add_todo(clean[:400]) fallback. Single explorer call 345.9s did everything (role bleed: explorer wrote the file).
+- Fix landed as d2de2b5 (15:52, opencode): _ROLE_PREFIX in _ITEM. VISION verified: re-parse of 01-architect.md now yields 4 todos + 4 wave; suite 136/136 green WITH the fix.
+- par2 re-proof launched (~15:5x, slug in-home-divyu-tony-e2e-par2-...) against fixed parser — verdict pending.
