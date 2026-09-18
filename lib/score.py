@@ -7,7 +7,7 @@ Score is always in [0,100].
 """
 
 
-def compute(b: dict, gate: str) -> dict:
+def compute(b: dict, gate: str, evidence: float | None = None) -> dict:
     todos = b.get("todos", [])
     wave = b.get("wave", [])
 
@@ -19,13 +19,15 @@ def compute(b: dict, gate: str) -> dict:
     todo_frac = done / total if total > 0 else 0.0
     wave_frac = waved / wavetotal if wavetotal > 0 else 0.0
 
-    # Determine critic bonus
     if gate == "ISSUES":
         critic_bonus = 0.0
     elif gate == "N/A":
         critic_bonus = 0.5
     else:
         critic_bonus = 1.0
+
+    if evidence is not None and gate == "PASS":
+        critic_bonus *= evidence
 
     score = round(40 * todo_frac + 40 * wave_frac + 20 * critic_bonus)
 

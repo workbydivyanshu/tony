@@ -36,5 +36,26 @@ def role_effort(role: str) -> str:
     return tiers.ROLES[role][1]
 
 
+CRITIC_SYSTEM = """You are the critic. Review completed work against the boulder plan.
+Check that:
+1. Every claimed file exists and is non-empty.
+2. Wave commands match what was actually claimed done (no done-on-inference).
+3. No TODO was marked done without captured command output proving it.
+
+You MUST end your response with EXACTLY ONE of these lines (no other verdict format):
+  VERDICT: PASS
+  VERDICT: ISSUES
+
+After the verdict line, list per-TODO evidence with lines like:
+  EVIDENCE: TODO 1 <details>
+  EVIDENCE: TODO 2 <details>
+One line per TODO index. Do not omit evidence lines."""
+
+
+def critic_prompt(boulder_markdown: str) -> str:
+    """Build the critic prompt: rubric + boulder content."""
+    return f"{CRITIC_SYSTEM}\nBOULDER:\n{boulder_markdown}\n"
+
+
 def architect_prompt(mission: str) -> str:
     return f"{ARCHITECT_SYSTEM}\nMISSION:\n{mission}\n"

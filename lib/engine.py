@@ -292,6 +292,52 @@ def critic_gate(output) -> str:
     return "ISSUES"
 
 
+def critic_gate_detail(output) -> tuple:
+    """Strict critic gate: parse 'VERDICT: PASS' or 'VERDICT: ISSUES' line.
+
+    Returns (gate, strong) where:
+      gate = "PASS" or "ISSUES"
+      strong = True if strict VERDICT line matched (case-insensitive),
+               False if legacy word-boundary fallback was used.
+
+    None/empty -> ("ISSUES", False).  "BYPASS"/"PASSED" do not match word-boundary PASS."""
+    if not output:
+        return ("ISSUES", False)
+    # Strict: require VERDICT: PASS or VERDICT: ISSUES on its own line
+    m = re.search(r"^\s*VERDICT:\s*(PASS|ISSUES)\s*$", output,
+                  re.IGNORECASE | re.MULTILINE)
+    if m:
+        gate = m.group(1).upper()
+        return (gate, True)
+    # Legacy fallback: word-boundary PASS
+    if re.search(r"\bPASS\b", output, re.IGNORECASE):
+        return ("PASS", False)
+    return ("ISSUES", False)
+
+
+def evidence_coverage(output: str, todos: list) -> float:
+    """Fraction of TODO indices referenced in output (0.0–1.0).
+
+    Matches 'TODO N', '#N', and line-leading 'N.' (1-based).
+    Empty todos -> 1.0."""
+    if not todos:
+        return 1.0
+    n = len(todos)
+    if not output:
+        return 0.0
+    indices = set()
+    # Match TODO N (case-insensitive)
+    for m in re.finditer(r"\b[Tt][Oo][Dd][Oo]\s+(\d+)", output):
+        indices.add(int(m.group(1)))
+    # Match #N
+    for m in re.finditer(r"#(\d+)", output):
+        indices.add(int(m.group(1)))
+    for m in re.finditer(r"(?<!\d)(\d+)\.\s", output):
+        indices.add(int(m.group(1)))
+    covered = sum(1 for i in range(1, n + 1) if i in indices)
+    return covered / n
+
+
 def apply_critic_gate(b: dict, gate: str, keep_going: bool = False,
                       fix_fn=None, critic_output: str = "") -> str:
     """Critic-gate decision after a critic call. Returns gate.
