@@ -7,10 +7,11 @@ import argparse
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import boulder, catalog, roles, tiers  # noqa: E402
+from lib import boulder, catalog, roles, tiers, watch  # noqa: E402
 
 VERSION = "0.1.0-p1"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
@@ -95,12 +96,21 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     boulder.log(b, f"mission started: {mission[:120]}")
     tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
     eng.run_loop(b, tier_models, workdir, parallel=parallel)
+    gate = "N/A"
     if len(b["todos"]) >= 3:
         crit_prompt = ("You are the critic. Plan + outputs follow. Find what is wrong, "
                        "missing, or unverified. Output PASS or ISSUES: <list>.\n\n" +
                        boulder.render(b))
         crit = eng.role_call("critic", assignments["critic"], crit_prompt, workdir)
         boulder.log(b, f"critic ({assignments['critic']}): {crit['output'][:300]}")
+        gate = eng.critic_gate(crit["output"])
+        boulder.log(b, f"critic gate: {gate}")
+        if gate == "ISSUES":
+            if keep_going:
+                boulder.log(b, "critic gate: ISSUES hold overridden by --keep-going")
+            else:
+                boulder.log(b, "critic gate: ISSUES; holding wave for builder fix")
+                _builder_fix([crit["output"]])
 
     def _builder_fix(fails):
         fix = eng.role_call("builder", assignments["builder"],
@@ -114,7 +124,7 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     waved = sum(1 for w in b["wave"] if w["box"])
     score = int(100 * (done + waved) / max(1, len(b["todos"]) + len(b["wave"])))
     rp = rep.write(os.path.expanduser("~/.fleet/out"), slug, mission,
-                   assignments, b, score, "auto-scored by wave+todo completion")
+                   assignments, b, score, f"auto-scored by wave+todo completion; critic gate: {gate}")
     print(f"tony: boulder {p} — {done}/{len(b['todos'])} TODOs, {waved}/{len(b['wave'])} wave")
     print(f"tony: report {rp}")
     print(f"MISSION SCORE: {score}/100 — auto-scored by wave+todo completion")
@@ -167,7 +177,70 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
     return 0
 
 
+def cmd_watch(slug: str, interval: int = 2, once: bool = False, timeout: int = 0) -> int:
+    """Watch: poll a boulder's progress via render_snapshot + runs.log + workdir."""
+    bpath = boulder.path_for(slug)
+    try:
+        b = boulder.load(bpath)
+    except OSError:
+        print(f"tony: no boulder '{slug}' ({bpath})")
+        return 2
+
+    runslog = os.path.join(TONY_DIR, "runs.log")
+    workdir = os.path.join(TONY_DIR, "work", slug)
+
+    def _snapshot() -> str:
+        try:
+            b2 = boulder.load(bpath)
+        except OSError:
+            b2 = b
+        runs_tail = watch.tail_lines(runslog, 15)
+        wf = watch.work_files(workdir)
+        return watch.render_snapshot(b2, runs_tail, wf, None)
+
+    def _done(bd: dict) -> bool:
+        p = boulder.progress(bd)
+        return p["done"] == p["total"] and p["waved"] == p["wavetotal"]
+
+    if once:
+        if not os.path.exists(bpath):
+            print(f"tony: no boulder '{slug}' ({bpath})")
+            return 2
+        snapshot = _snapshot()
+        print(snapshot, end="")
+        if _done(b):
+            p = boulder.progress(b)
+            print(f"SCORE: {p['score']}/100")
+            return 0
+        return 1
+
+    # Poll loop
+    t0 = time.time()
+    try:
+        while True:
+            print("\033[2J\033[H", end="")
+            try:
+                b = boulder.load(bpath)
+            except OSError:
+                print(f"tony: no boulder '{slug}' ({bpath})")
+                return 2
+            snapshot = _snapshot()
+            print(snapshot, end="")
+            if _done(b):
+                p = boulder.progress(b)
+                print(f"SCORE: {p['score']}/100")
+                return 0
+            if timeout > 0 and (time.time() - t0) >= timeout:
+                p = boulder.progress(b)
+                print(f"SCORE: {p['score']}/100")
+                return 0
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        return 130
+
+
 def main(argv=None) -> int:
+    argv = argv or sys.argv[1:]
     p = argparse.ArgumentParser(prog="tony", description="free-model-native agent CLI")
     p.add_argument("--version", action="store_true")
     p.add_argument("--models", action="store_true", help="print live catalog + role assignments")
@@ -177,11 +250,32 @@ def main(argv=None) -> int:
     p.add_argument("--max-verify", metavar="N", type=int, default=3, help="total wave attempts (default 3); fixes run between attempts only")
     p.add_argument("--resume", metavar="SLUG", default=None, help="resume boulder <slug>: run unchecked TODOs + wave, no second architect call")
     p.add_argument("--keep-going", action="store_true", help="run the wave even with [BLOCKED] TODOs (default: wave skipped when blocked)")
+    p.add_argument("--watch", metavar="SLUG", default=None, help="poll <slug> boulder progress")
     p.add_argument("mission", nargs="?", default=None, help="one-shot mission text")
-    args = p.parse_args(argv)
+    args, _ = p.parse_known_args(argv)
     if args.version:
         print(f"tony {VERSION}")
         return 0
+    if args.watch:
+        # Find --watch in argv and parse everything after it with watch subparser
+        watch_idx = argv.index("--watch")
+        rest = argv[watch_idx + 1:]
+        wp = argparse.ArgumentParser(prog="tony watch")
+        wp.add_argument("slug", help="boulder slug to watch")
+        wp.add_argument("--interval", type=int, default=2, help="poll interval in seconds (default 2)")
+        wp.add_argument("--once", action="store_true", help="print a single snapshot and exit")
+        wp.add_argument("--timeout", type=int, default=0, help="exit after S seconds (0=never)")
+        wargs = wp.parse_args(rest)
+        return cmd_watch(wargs.slug, interval=wargs.interval, once=wargs.once, timeout=wargs.timeout)
+    if args.mission == "watch" and "watch" in argv and argv.index("watch") + 1 < len(argv):
+        wi = argv.index("watch")
+        wp = argparse.ArgumentParser(prog="tony watch")
+        wp.add_argument("slug", help="boulder slug to watch")
+        wp.add_argument("--interval", type=int, default=2, help="poll interval in seconds (default 2)")
+        wp.add_argument("--once", action="store_true", help="print a single snapshot and exit")
+        wp.add_argument("--timeout", type=int, default=0, help="exit after S seconds (0=never)")
+        wargs = wp.parse_args(argv[wi + 1:])
+        return cmd_watch(wargs.slug, interval=wargs.interval, once=wargs.once, timeout=wargs.timeout)
     if args.resume:
         return cmd_resume(args.resume, parallel=args.parallel, max_verify=args.max_verify,
                           keep_going=args.keep_going)

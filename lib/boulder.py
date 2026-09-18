@@ -43,6 +43,20 @@ def render(b: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def progress(b: dict) -> dict:
+    """Return {done,total,waved,wavetotal,score,blocked} for a boulder."""
+    todos = b.get("todos", [])
+    wave = b.get("wave", [])
+    done = sum(1 for t in todos if t["box"])
+    total = len(todos)
+    waved = sum(1 for w in wave if w["box"])
+    wavetotal = len(wave)
+    score = int(100 * (done + waved) / max(1, total + wavetotal))
+    blocked = any("[BLOCKED]" in (t.get("text") or "") for t in todos)
+    return {"done": done, "total": total, "waved": waved,
+            "wavetotal": wavetotal, "score": score, "blocked": blocked}
+
+
 _ITEM = re.compile(r"^-\s\[( |x)\]\s(.*)$")
 
 

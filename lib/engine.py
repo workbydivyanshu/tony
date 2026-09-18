@@ -242,3 +242,14 @@ def verify_wave(b: dict, max_verify: int = 3, cwd: str = "/tmp", fix_fn=None) ->
         else:
             bmod.log(b, f"wave attempt {attempt} failed; wave exhausted ({total} attempts)")
     return results
+
+
+def critic_gate(output) -> str:
+    """Critic gate: return "PASS" iff case-insensitive word-boundary PASS
+    (regex r"\bPASS\b", re.IGNORECASE) is present in output; else "ISSUES".
+    None/empty input -> "ISSUES". "BYPASS"/"PASSED" must NOT match."""
+    if not output:
+        return "ISSUES"
+    if re.search(r"\bPASS\b", output, re.IGNORECASE):
+        return "PASS"
+    return "ISSUES"

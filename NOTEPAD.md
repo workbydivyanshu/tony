@@ -157,3 +157,35 @@ Criteria:
 - C4: full suite green + keyless clean + --help shows flags + live --models 7 models
 SURFACE: --help + --models live + on-disk boulder round-trip. No live model burn (resume e2e would spend calls; seam proof is the faithful evidence for continuity).
 Teardown: fake runners + echo/false only; per-test tmpdirs removed; no procs.
+
+## 12:5x — P5c-1 GREEN, COMMITTED c3abcab
+- RED captured: should_run_wave unknown (LSP; old-file LSP noise = stale cache, ignored)
+- GREEN: 26/26 (23 prior unmodified + 3 new: resume-skips-done, blocked-gate, save/load round-trip)
+- C1 resume skips checked (fake-runner: 1 call for the 1 unchecked TODO only)
+- C2 gate: blocked+no-flag -> skip; blocked+keep-going -> run; clean -> run either way
+- C3 round-trip boxes survive save/load
+- SURFACE LIVE (zero model burn): --resume p5c-resume-proof (1/1 done + echo wave) -> 100/100, no role calls; --help shows --resume/--keep-going; keyless grep clean; --models 7 models live
+- Proof residue cleared (boulder+report+workdir); commit c3abcab atomic
+
+## P5c-2 plan (appended) — progress + critic_gate + watch + cmd wiring
+Tier: LIGHT (lib/watch.py + engine.critic_gate + boulder.progress + tony --watch wiring; all context loaded; no plan file -> self-review).
+Goal: land pure render_snapshot + tail_lines + work_files helpers, critic_gate gate function, boulder.progress semantics, and tony --watch CLI wiring with join-bug fix `_builder_fix([crit...])`.
+Criteria:
+- C1: watch.render_snapshot produces pane headers (TODOs/wave/runs/roster) + truncates to <=200 chars — test
+- C2: watch.tail_lines + work_files helpers — test
+- C3: critic_gate("PASS")=="PASS", case-insensitive word-boundary only, None/empty/"BYPASS"/"PASSED" -> "ISSUES" — test
+- C4: boulder.progress returns {done,total,waved,wavetotal,score,blocked} — test
+- C5: tony --watch <slug> + --once + --interval + --timeout wired and live — verify
+- C6: join-bug fix: `_builder_fix([crit["output"]])` moved inside `if gate == "ISSUES"` block (was outside, ran unconditionally) — verify by code review
+- C7: suite 42/42 green (26 prior + 16 new), keyless grep clean, zero hardcoded ids, live --help + --models
+SURFACE: --help + --models live + --watch once. No live model burn (watch polls local boulder only).
+Teardown: fake runners + echo/false only; per-test tmpdirs removed; no procs.
+## 12:5x — P5c-2 GREEN, COMMITTED (pending)
+- RED captured: progress/critic_gate/watch symbols absent (test_p5c2.py 16 tests)
+- GREEN: 42/42 (26 prior unmodified + 16 new). C1 render_snapshot panes + truncation; C2 tail_lines/work_files; C3 critic_gate word-boundary; C4 progress dict shape; C5 --watch once live; C6 join-bug fix _builder_fix inside ISSUES block; C7 suite 42/42, keyless clean, --help + --models live
+- SURFACE: --help + --models + --watch once live. No live model burn (watch polls local boulder only).
+- Join-bug fix: `_builder_fix([crit["output"]])` was outside `if gate == "ISSUES"` in cmd_mission, running unconditionally on every mission with >=3 TODOs. Moved inside the block. Verified by code review + test_p5c2.py.
+- Exit proofs: 2 missing / 0 done-once / 1 open-once (watch --once exits 1 when boulder incomplete, 0 when done; --watch poll exits 0 on completion).
+- Suite 42/42 green. No live model burn.
+## Now
+P5c-2 done. Awaiting user: P5d (config system) or stop.
