@@ -22,6 +22,8 @@ def fake_fail_once():
     return run
 
 def test_role_call(tmpdir="/tmp/tony-test-eng"):
+    import shutil
+    shutil.rmtree(tmpdir, ignore_errors=True)
     os.makedirs(tmpdir, exist_ok=True)
     res = engine.role_call("builder", "opencode/big-pickle", "do X",
                            workdir=tmpdir, runner=fake_ok)
@@ -29,6 +31,8 @@ def test_role_call(tmpdir="/tmp/tony-test-eng"):
     assert os.path.exists(res["outfile"]), res
 
 def test_loop_demote_then_ok(tmpdir="/tmp/tony-test-eng2"):
+    import shutil
+    shutil.rmtree(tmpdir, ignore_errors=True)
     os.makedirs(tmpdir, exist_ok=True)
     b = boulder.new("t")
     boulder.add_todo(b, "1. hard thing")
@@ -37,3 +41,37 @@ def test_loop_demote_then_ok(tmpdir="/tmp/tony-test-eng2"):
     assert b["todos"][0]["box"] is True, b["todos"]
     rows = open(os.path.join(tmpdir, "runs.log")).read().strip().splitlines()
     assert len(rows) == 2 and "fail" in rows[0] and "ok" in rows[1], rows
+
+
+def test_loop_double_fail_blocked(tmpdir="/tmp/tony-test-eng3"):
+    import shutil
+    shutil.rmtree(tmpdir, ignore_errors=True)
+    os.makedirs(tmpdir, exist_ok=True)
+    def always_fail(cmd, **kw):
+        class R: returncode = 1; stdout = ""; stderr = "down"
+        return R()
+    b = boulder.new("t")
+    boulder.add_todo(b, "1. impossible thing")
+    engine.run_loop(b, {"builder": ["opencode/big-pickle", "opencode/mimo-v2.5-free"]},
+                    workdir=tmpdir, runner=always_fail,
+                    runslog=os.path.join(tmpdir, "runs.log"))
+    assert b["todos"][0]["box"] is False
+    assert "[BLOCKED]" in b["todos"][0]["text"], b["todos"][0]
+    rows = open(os.path.join(tmpdir, "runs.log")).read().strip().splitlines()
+    assert len(rows) == 2 and all("fail" in r for r in rows), rows
+
+
+def test_loop_no_fallback_blocked(tmpdir="/tmp/tony-test-eng4"):
+    import shutil
+    shutil.rmtree(tmpdir, ignore_errors=True)
+    os.makedirs(tmpdir, exist_ok=True)
+    def always_fail(cmd, **kw):
+        class R: returncode = 1; stdout = ""; stderr = "down"
+        return R()
+    b = boulder.new("t")
+    boulder.add_todo(b, "1. lonely thing")
+    engine.run_loop(b, {"builder": ["opencode/big-pickle"]},
+                    workdir=tmpdir, runner=always_fail,
+                    runslog=os.path.join(tmpdir, "runs.log"))
+    assert b["todos"][0]["box"] is False
+    assert "[BLOCKED]" in b["todos"][0]["text"], b["todos"][0]

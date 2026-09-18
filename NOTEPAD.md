@@ -64,9 +64,11 @@ Criteria:
 Steps: test_engine.py RED -> engine.py GREEN -> CLI mission wired -> live C4 -> commit.
 ## Now
 test_engine.py RED capture
+## 03:5x — P3 GREEN, COMMITTED d1548cc
+- RED: ImportError engine (pre-lib) captured
+- GREEN: 7/7 (5 prior + role_call + demote-retry-then-ok with 2-line runs.log proof)
+- C4/F1 LIVE: tony 'reply with TONY ONLINE' — architect (nemotron-3-ultra, 56s) planned 1 TODO + F1 wave; builder (84s) wrote response.txt='TONY ONLINE'; boulder 1/1 done; runs.log row captured. Cleanup: response.txt removed, .gitignore added, no fleet leak (~/.fleet/boulder/tony-online.md NOT created — opencode wrote to its own cwd only... verified absent)
+## Now
+P3 done. Awaiting user: P4 (critic + wave + report + SCORE) or stop.
 ## Todo
-- test_engine RED
-- lib/engine.py GREEN
-- tony MISSION one-shot wired
-- live C4 (F1) + log + boulder wave check
-- commit + notepad
+- (P1+P2+P3 done)

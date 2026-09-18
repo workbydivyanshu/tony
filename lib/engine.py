@@ -23,7 +23,7 @@ def _runslog_append(path: str, role: str, model: str, status: str, duration: flo
 
 
 def role_call(role: str, model: str, subtask: str, workdir: str,
-              runner=None, timeout: int = 600) -> dict:
+              runner=None, timeout: int = 600, runslog: str = RUNSLOG_DEFAULT) -> dict:
     """One stateless role call. Returns {status, output, outfile, duration, model}."""
     os.makedirs(workdir, exist_ok=True)
     run = runner or subprocess.run
@@ -36,6 +36,7 @@ def role_call(role: str, model: str, subtask: str, workdir: str,
     except Exception as e:  # runner exploded (timeout, missing binary)
         ok, output = False, f"role_call exception: {e}"
     dur = time.time() - t0
+    _runslog_append(runslog, role, model, "ok" if ok else "fail", dur)
     n = len([f for f in os.listdir(workdir) if f.endswith(".md")]) + 1
     outfile = os.path.join(workdir, f"{n:02d}-{role}.md")
     try:
@@ -63,8 +64,8 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
             bmod.log(b, f"TODO {i+1} BLOCKED (no model)")
             continue
         model = models[0]
-        res = role_call(role, model, todo["text"], workdir, runner=runner)
-        _runslog_append(runslog, role, model, res["status"], res["duration"])
+        res = role_call(role, model, todo["text"], workdir, runner=runner,
+                        runslog=runslog)
         if res["status"] == "ok":
             bmod.flip(b, i, True)
             bmod.log(b, f"TODO {i+1} done via {model} ({res['duration']:.0f}s) -> {res['outfile']}")
@@ -72,8 +73,8 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
             bmod.log(b, f"TODO {i+1} fail via {model}: {(res['output'][:120])}")
             if len(models) > 1:
                 model2 = models[1]
-                res2 = role_call(role, model2, todo["text"], workdir, runner=runner)
-                _runslog_append(runslog, role, model2, res2["status"], res2["duration"])
+                res2 = role_call(role, model2, todo["text"], workdir, runner=runner,
+                                 runslog=runslog)
                 if res2["status"] == "ok":
                     bmod.flip(b, i, True)
                     bmod.log(b, f"TODO {i+1} done on demote via {model2} -> {res2['outfile']}")
