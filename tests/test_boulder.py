@@ -36,3 +36,34 @@ def test_new_and_log():
     assert "- [ ] do the thing" in out
     assert "- [ ] prove the thing" in out
     assert "a thing happened" in out
+
+ARCHITECT_TAGGED = """# Boulder: tony-parallel-recon
+## TODOs
+- [role:explorer] [ ] 1. List all files in ~/tony/lib directory
+- [role:explorer] [ ] 2. Read boulder format from ~/tony/lib/boulder.py header
+- [role:builder] [ ] 3. Write hello-par.txt with exact content
+- [role:builder] [x] 4. Already verified thing
+## Final Verification Wave
+- [ ] F1. test -f /home/divyu/tony-e2e-par/hello-par.txt
+## Progress Log
+"""
+
+def test_parse_role_tag_before_box():
+    # Live parallel-e2e proof: the architect emits tags BEFORE the box
+    # (roles.py orders it so). The parser must accept that order, keep the
+    # tag in text for dispatch, and render box-first fleet format.
+    import sys as _s
+    _s.path.insert(0, ".")
+    from lib import engine as _eng
+    b = boulder.parse(ARCHITECT_TAGGED)
+    assert len(b["todos"]) == 4, b["todos"]
+    assert b["todos"][0]["text"].startswith("[role:explorer]"), b["todos"][0]
+    assert b["todos"][3]["box"] is True
+    assert [_eng.todo_role(t["text"]) for t in b["todos"]] == [
+        "explorer", "explorer", "builder", "builder"]
+    out = boulder.render(b)
+    assert out.count("## TODOs") == 1, "no duplicated sections"
+    b2 = boulder.parse(out)
+    assert len(b2["todos"]) == 4, "render must survive re-parse"
+    assert [_eng.todo_role(t["text"]) for t in b2["todos"]] == [
+        "explorer", "explorer", "builder", "builder"]

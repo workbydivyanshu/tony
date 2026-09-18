@@ -57,7 +57,8 @@ def progress(b: dict) -> dict:
             "wavetotal": wavetotal, "score": score, "blocked": blocked}
 
 
-_ITEM = re.compile(r"^-\s\[( |x)\]\s(.*)$")
+_ROLE_PREFIX = r"(?:(\[role:\w+\])\s+)?"
+_ITEM = re.compile(r"^-\s" + _ROLE_PREFIX + r"\[( |x)\]\s(.*)$")
 
 
 def _parse_section(lines: list) -> list:
@@ -65,7 +66,8 @@ def _parse_section(lines: list) -> list:
     for ln in lines:
         m = _ITEM.match(ln.strip())
         if m:
-            out.append({"box": m.group(1) == "x", "text": m.group(2)})
+            tag = (m.group(1) + " ") if m.group(1) else ""
+            out.append({"box": m.group(2) == "x", "text": tag + m.group(3)})
     return out
 
 
