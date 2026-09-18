@@ -221,6 +221,13 @@ P5d done. Tree at P5d landing commit.
 - Scripture wave status: F1 ✓ (TONY ONLINE live), F2 ✓ (100/100 re-run), F3/F4 → verifying now (free). Unproven live path: --parallel e2e (P5a deferred payoff) — next live burn.
 - Missing vs scripture flags: --slug auto absent (slug always derived; acceptable, note only). Plan-gates omO-style still P5c+ backlog.
 
+## TAKEOVER VERIFIED — VISION live (2026-09-18 ~evening)
+- Sub-agent launch: CONFIRMED live. Fired explore (ses_f4c0c6969ffejFgTtraiuWNm1d, ran nemotron-3.5-lightning-free, 13m) — returned full P1-P5c audit with file:line cites, 0 issues, keyless clean. Sub-agent lane works.
+- Suite EXECUTED by VISION: 136/136 green (16 modules; 131 at takeover + 5 new since — plangate/tui/cli-wiring growth). Plain-assert runner (unittest finds 0, pre-existing style).
+- Live lane: --models 7 models + role map; --status JSON valid (catalog+tiers+roles+boulders); --help shows all flags through --timeout.
+- F3: --status live ✓; config json.tool N/A (no ~/.tony/config.json yet — defaults active, correct state). F4: keyless grep clean (no api_key/Authorization/Bearer in lib/tony/tests); no literal opencode/<id> in lib (only "opencode/" prefix filter in catalog.py:16 + tier regex patterns in tiers.py:10-11 — patterns, not IDs, by design).
+- Next: --parallel e2e live proof (P5a deferred payoff) + plan-gates triage.
+
 ## P-next plan (appended) — plan-gate omO-style + F3/F4 scripture wave
 Tier: LIGHT (lib/plangate.py pure helper + 1 CLI flag + gate call; no plan file -> self-review).
 Goal: close the last auditor-confirmed gap (no pre-execution approval). After architect plans, before ANY builder call, TTY missions pause for y/N unless --yes; headless (non-TTY) proceeds with honest log (never hang a pipe).
