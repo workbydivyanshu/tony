@@ -384,3 +384,10 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - LIVE PROOF (free models, 80/100): skill 'skillproof doctrine' (title must contain SKILLPROOF) -> architect boulder title '# Boulder: SKILLPROOF-verification', 4 doctrine hits in 01-architect.md. 3/3 TODOs + 2/2 wave, report -> ~/.fleet/out/tony-reply-with-skillproof.md. Slow lane: one builder 344s.
 - Teardown: probe skill kept (real skill, tiny); mission artifacts = evidence; no procs (pgrep self-match re-confirmed).
 
+## P13 — research fan-out (2026-09-18 ~21:15)
+- Plan: `tony --research TOPIC` = 3 parallel explorers (distinct angles, websearch MCP) -> researcher synthesis -> critic gate (+fix loop) -> wave (report exists, >=3 URLs). Pure helpers lib/research.py, orchestration cmd_research.
+- GREEN: suite 158/158 (154 + 4 test_research). Wave cmds are real shell (F2 python3 URL-count check, tested fail+pass paths).
+- LIVE PROOF (100/100, topic 'Fedora Linux 44 release features'): 3/3 explorers CONCURRENT (timestamps overlap 13s window), synthesis 20s, critic PASS, brief 27 URLs, report -> ~/.fleet/out/tony-research-fedora-linux-44-release-features.md. Hermes-map gap closed: research backend rides opencode free models + websearch MCP (no Gemini lane — by design, keyless).
+- Teardown: mission artifacts = evidence; probe exited clean; no procs.
+
+

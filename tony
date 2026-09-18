@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 
@@ -195,6 +196,77 @@ def cmd_dryrun(mission: str) -> int:
 def _matched_skills(mission: str) -> list:
     from lib import skills as skills_mod
     return skills_mod.match(mission, skills_mod.discover())
+
+
+def cmd_research(topic: str, timeout: int = 900) -> int:
+    """Deep-research fan-out: 3 parallel explorers (websearch MCP) -> researcher
+    synthesis -> critic gate -> wave (report exists, >=3 cited URLs)."""
+    from concurrent.futures import ThreadPoolExecutor
+    from lib import engine as eng, research as res_mod, report as rep, score as score_mod
+    models = catalog.live_catalog()
+    raw = tiers.assign_roles_with_sources(models, config.get_roles() or None)
+    assignments = {r: (v["model"] if isinstance(v, dict) else v) for r, v in raw.items()}
+    slug = slugify(f"research {topic}")[:48]
+    workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", slug)
+    print(f"tony: research '{topic[:80]}' -> slug {slug}")
+
+    prompts = res_mod.explorer_prompts(topic)
+    print(f"tony: fan-out {len(prompts)} explorers (parallel, websearch MCP)")
+    with ThreadPoolExecutor(max_workers=len(prompts)) as pool:
+        futures = [pool.submit(eng.role_call, "explorer",
+                               assignments["explorer"], p, workdir, timeout=timeout)
+                   for p in prompts]
+        results = [f.result() for f in futures]
+    findings = [eng.sanitize(r["output"]) for r in results if r["status"] == "ok"]
+    ok_n = len(findings)
+    print(f"tony: explorers ok {ok_n}/{len(prompts)}")
+    if not findings:
+        print("tony: all explorers failed; nothing to synthesize")
+        return 1
+
+    syn = eng.role_call("researcher", assignments["researcher"],
+                        res_mod.synthesis_prompt(topic, findings), workdir,
+                        timeout=timeout)
+    print(f"tony: synthesis {syn['status']} ({syn['duration']:.0f}s) -> {syn['outfile']}")
+    if syn["status"] != "ok":
+        print("tony: synthesis failed")
+        return 1
+    report_path = os.path.join(workdir, "brief.md")
+    with open(report_path, "w") as f:
+        f.write(eng.sanitize(syn["output"]))
+
+    gate = "PASS"
+    crit = eng.role_call("critic", assignments["critic"],
+                         roles.critic_prompt(open(report_path).read()
+                                             + "\nTOPIC: " + topic), workdir,
+                         timeout=timeout)
+    if crit["status"] == "ok" and "ISSUES" in eng.sanitize(crit["output"])[:400]:
+        gate = "ISSUES"
+        fix = eng.role_call("researcher", assignments["researcher"],
+                            "The critic flagged issues in the brief at "
+                            f"{report_path}. Rewrite the brief fixing them: "
+                            + eng.sanitize(crit["output"])[:1500], workdir,
+                            timeout=timeout)
+        if fix["status"] == "ok":
+            with open(report_path, "w") as f:
+                f.write(eng.sanitize(fix["output"]))
+            gate = "PASS-after-fix"
+    print(f"tony: critic gate {gate}")
+
+    results_wave = [subprocess.run(c, shell=True, capture_output=True).returncode == 0
+                    for c in res_mod.wave_cmds(report_path)]
+    b = boulder.new(f"research: {topic[:60]}")
+    boulder.add_todo(b, "fan-out explorers"); b["todos"][0]["box"] = ok_n > 0
+    boulder.add_todo(b, "synthesis brief"); b["todos"][1]["box"] = syn["status"] == "ok"
+    boulder.add_wave(b, "report exists"); b["wave"][0]["box"] = results_wave[0]
+    boulder.add_wave(b, ">=3 cited URLs"); b["wave"][1]["box"] = results_wave[1]
+    score = score_mod.compute(b, gate)["score"]
+    rp = rep.write(os.path.expanduser("~/.fleet/out"), slug, f"research: {topic}",
+                   assignments, b, score,
+                   f"fan-out {ok_n}/{len(prompts)} explorers; critic gate: {gate}")
+    print(f"tony: report {rp} (brief: {report_path})")
+    print(f"RESEARCH SCORE: {score}/100")
+    return 0
 
 
 def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
@@ -409,6 +481,7 @@ def main(argv=None) -> int:
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + mcp + boulders")
     p.add_argument("--mcp-status", action="store_true", help="list MCP servers delegates inherit via opencode")
     p.add_argument("--skills", action="store_true", help="list discovered skills from ~/.tony/skills")
+    p.add_argument("--research", metavar="TOPIC", default=None, help="deep-research fan-out: 3 parallel explorers (websearch MCP) -> cited synthesis -> critic gate")
     p.add_argument("--remember", metavar="FACT", default=None, help="append one dated fact to ~/.tony/memory/MEMORY.md")
     p.add_argument("--recall", metavar="QUERY", nargs="?", const="", default=None, help="print memory lines matching QUERY (or all when bare)")
     p.add_argument("--forget", metavar="SUBSTR", default=None, help="remove memory lines containing SUBSTR")
@@ -482,6 +555,8 @@ def main(argv=None) -> int:
         return cmd_daemon(args.inbox, interval=args.interval, once=args.daemon_once,
                           parallel=args.parallel, max_verify=args.max_verify,
                           keep_going=args.keep_going, timeout=args.timeout)
+    if args.research:
+        return cmd_research(args.research, timeout=args.timeout)
     if args.skills:
         from lib import skills as skills_mod
         found = skills_mod.discover()
