@@ -332,3 +332,19 @@ Criteria:
 - C4: suite all green + keyless clean + zero hardcoded model IDs
 SURFACE: live CLI round-trip on real ~/.tony/memory. No live model burn (memory proven at seam + live CLI IO).
 Teardown: tests use temp HOME dirs; live probe fact forgotten after proof; no procs.
+
+## P8 GREEN + SURFACE (2026-09-18, VISION)
+- RED captured: lib.memory unknown import + architect_prompt memory_lines missing (LSP; other-file noise = stale cache per precedent).
+- GREEN: suite 141/141 (139 prior untouched + 2 new test_memory). C1 temp-HOME round-trip; C3 prompt carries memory lines.
+- SURFACE LIVE: --remember/--recall/--forget round-trip on real ~/.tony/memory (probe fact written, recalled, forgotten, verified absent). --memory prints path + dump. Zero model burn. Real memory file currently empty (fresh start).
+- Committed (see log above). No strays (no procs spawned).
+
+## P9 (v0.3 chat — Hermes-replacement step 2) — plan (2026-09-18)
+Tier: HEAVY (new interactive integration: REPL + history + live role calls; no plan file -> self-review with live proof).
+Goal: `tony chat [--session NAME]` — conversational loop with persistent history (~/.tony/chat/<session>.md), memory auto-injection, each turn a fast-tier role call. The Hermes chat layer, Tony-native.
+Criteria:
+- C1: lib/chat.py history round-trip (append exchange, load, build prompt includes history + memory lines) — test temp HOME
+- C2: REPL control (skips blanks, /quit + EOF exit cleanly, history saved) — test with fake input/output/runner
+- C3: suite all green + keyless clean + zero hardcoded IDs
+- C4 SURFACE: one live exchange on fast-tier free model (prove conversational reply, not inference)
+Teardown: tests fake everything; live proof session file kept as evidence (tiny); no procs left.
