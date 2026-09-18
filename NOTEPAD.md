@@ -220,3 +220,21 @@ P5d done. Tree at P5d landing commit.
 - VISION verified, not trusted: full suite EXECUTED 131/131 green (plain-assert runner; unittest loader finds 0 — tests are bare functions, pre-existing style); keyless grep clean (no api_key/Authorization/Bearer); live --models 7 models + role map; --help/--status live.
 - Scripture wave status: F1 ✓ (TONY ONLINE live), F2 ✓ (100/100 re-run), F3/F4 → verifying now (free). Unproven live path: --parallel e2e (P5a deferred payoff) — next live burn.
 - Missing vs scripture flags: --slug auto absent (slug always derived; acceptable, note only). Plan-gates omO-style still P5c+ backlog.
+
+## P-next plan (appended) — plan-gate omO-style + F3/F4 scripture wave
+Tier: LIGHT (lib/plangate.py pure helper + 1 CLI flag + gate call; no plan file -> self-review).
+Goal: close the last auditor-confirmed gap (no pre-execution approval). After architect plans, before ANY builder call, TTY missions pause for y/N unless --yes; headless (non-TTY) proceeds with honest log (never hang a pipe).
+Criteria:
+- C1: pre_approved (--yes) executes without prompting (input_fn must never fire) — test
+- C2: non-TTY proceeds + logs headless-skip (no hang) — test
+- C3: TTY y/yes proceeds; empty/n declines (gate returns False) — test
+- C4: declined mission saves boulder, spends zero builder calls, exits 2 — test
+- C5: suite all green + keyless clean + live --help shows --yes + F3 (--status JSON valid) + F4 (grep zero hits)
+SURFACE: --help + --status live. No live model burn (gate proven at seam; architect call untouched).
+Teardown: fake input_fn only; per-test tmpdirs removed; no procs.
+
+## 15:4x — P-next GREEN, plan-gate shipped
+- RED: lib.plangate unknown import (LSP; other-file LSP noise = stale cache per precedent, ignored)
+- GREEN: 136/136 (131 prior unmodified + 5 new test_plangate.py). C1 --yes never prompts; C2 non-TTY proceeds+logs (no hang); C3 y/yes proceeds, empty/n declines; C4 declined -> boulder saved, exit 2, zero builder calls by construction (gate sits before run_loop)
+- SURFACE LIVE: --help shows --yes; F3 --status JSON valid; F4 keyless grep zero hits; --models 7 live (prior run)
+- Auditor gaps closed: --once/--interval confirmed wired via watch sub-parser (tony:316-325); --slug still absent by design (slugify); plan-gate was the last real gap — now shut.

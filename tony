@@ -123,9 +123,10 @@ def cmd_dryrun(mission: str) -> int:
 
 
 def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
-                keep_going: bool = False, timeout: int = 600) -> int:
+                keep_going: bool = False, timeout: int = 600, yes: bool = False) -> int:
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
     from lib import engine as eng
+    from lib import plangate as gate_mod
     from lib import report as rep
     models = catalog.live_catalog()
     overrides = config.get_roles() or None
@@ -147,6 +148,12 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     if not b["todos"]:
         boulder.add_todo(b, clean[:400])
     boulder.log(b, f"mission started: {mission[:120]}")
+    import sys as _sys
+    if not gate_mod.confirm_plan(b, is_tty=_sys.stdin.isatty(), pre_approved=yes):
+        p = boulder.save(slug, b)
+        print(f"tony: boulder {p} — plan held, zero builder calls spent")
+        print("MISSION HELD — plan declined at gate")
+        return 2
     tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
     eng.run_loop(b, tier_models, workdir, parallel=parallel,
                  sleep_fn=time.sleep, timeout=timeout)
@@ -301,6 +308,7 @@ def main(argv=None) -> int:
     p.add_argument("--max-verify", metavar="N", type=int, default=3, help="total wave attempts (default 3); fixes run between attempts only")
     p.add_argument("--resume", metavar="SLUG", default=None, help="resume boulder <slug>: run unchecked TODOs + wave, no second architect call")
     p.add_argument("--keep-going", action="store_true", help="run the wave even with [BLOCKED] TODOs (default: wave skipped when blocked)")
+    p.add_argument("--yes", action="store_true", help="skip the pre-execution plan gate (default: TTY missions pause for y/N)")
     p.add_argument("--watch", metavar="SLUG", default=None, help="poll <slug> boulder progress")
     p.add_argument("--tui", metavar="SLUG", default=None, help="curses TUI for <slug> (falls back to poll loop when no TTY)")
     p.add_argument("--timeout", metavar="N", type=int, default=600, help="role-call timeout in seconds (default 600)")
@@ -361,7 +369,7 @@ def main(argv=None) -> int:
         return cmd_dryrun(args.dry_run)
     if args.mission:
         return cmd_mission(args.mission, parallel=args.parallel, max_verify=args.max_verify,
-                           keep_going=args.keep_going, timeout=args.timeout)
+                           keep_going=args.keep_going, timeout=args.timeout, yes=args.yes)
     return cmd_models(args)
 
 
