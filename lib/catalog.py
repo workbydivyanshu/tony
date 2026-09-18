@@ -1,6 +1,7 @@
 """catalog.py — live opencode free-model catalog reader. Stdlib only."""
 import json
 import os
+import shutil
 import subprocess
 import time
 
@@ -35,14 +36,31 @@ def _cache_write(models: list) -> None:
         pass
 
 
-def live_catalog(opencode_bin: str = "opencode") -> list:
+def resolve_bin(explicit: str | None = None) -> str:
+    if explicit:
+        return explicit
+    env = os.environ.get("OPENCODE_BIN")
+    if env:
+        return env
+    try:
+        with open(os.path.join(TONY_DIR, "config.json")) as f:
+            cfg = json.load(f)
+        if cfg.get("opencode_bin"):
+            return cfg["opencode_bin"]
+    except (OSError, ValueError):
+        pass
+    return shutil.which("opencode") or "opencode"
+
+
+def live_catalog(opencode_bin: str | None = None) -> list:
     """Read `opencode models`. Cached 60s. Fails loud, never silent."""
+    bin = resolve_bin(opencode_bin)
     cached = _cache_read()
     if cached:
         return cached
     try:
         out = subprocess.run(
-            [opencode_bin, "models"], capture_output=True, text=True, timeout=90
+            [bin, "models"], capture_output=True, text=True, timeout=90
         ).stdout
     except (OSError, subprocess.TimeoutExpired) as e:
         raise RuntimeError(f"opencode models failed: {e}")

@@ -28,3 +28,12 @@ def test_roles():
     m = tiers.assign_roles(sorted(SAMPLE.split()))
     assert m["architect"] == "opencode/nemotron-3-ultra-free", m
     assert m["scribe"] == "opencode/nemotron-3.5-lightning-free", m
+
+def test_resolve_bin():
+    assert catalog.resolve_bin("/custom/opencode") == "/custom/opencode"
+    os.environ["OPENCODE_BIN"] = "/env/opencode"
+    try:
+        assert catalog.resolve_bin() == "/env/opencode"
+    finally:
+        del os.environ["OPENCODE_BIN"]
+    assert catalog.resolve_bin().strip() != ""

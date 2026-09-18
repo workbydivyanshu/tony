@@ -68,7 +68,33 @@ test_engine.py RED capture
 - RED: ImportError engine (pre-lib) captured
 - GREEN: 7/7 (5 prior + role_call + demote-retry-then-ok with 2-line runs.log proof)
 - C4/F1 LIVE: tony 'reply with TONY ONLINE' — architect (nemotron-3-ultra, 56s) planned 1 TODO + F1 wave; builder (84s) wrote response.txt='TONY ONLINE'; boulder 1/1 done; runs.log row captured. Cleanup: response.txt removed, .gitignore added, no fleet leak (~/.fleet/boulder/tony-online.md NOT created — opencode wrote to its own cwd only... verified absent)
+## Reviewer verdict (FRIDAY, tony-p3-review.md): ISSUES — all verified, dispositions below
+- ISSUE-1 (BLOCKED branches untested): FIXED — added test_loop_double_fail_blocked + test_loop_no_fallback_blocked; 9/9 green. Also found + fixed: tests were non-hermetic (fixed /tmp dirs accumulated rows across runs and failed my own re-run — now shutil.rmtree per test).
+- ISSUE-2 (exit-code-only done-ness, wave never executed): CONFIRMED REAL, deferred to P4 by design (critic + verification wave is P4's entire job per scripture Ch.6). F1's response.txt evidence was captured live (I read the file before cleanup), but the engine cannot prove artifacts — P4 fixes the loop, not the claim.
+- ISSUE-3 (architect call bypasses runs.log): FIXED — logging moved INTO role_call (single choke point); run_loop passes runslog through; demote path no longer double-appends.
+- ISSUE-4 (ANSI noise in saved boulder): CONFIRMED, deferred to P4 (sanitize architect output at parse boundary when the engine owns the wave).
+- BONUS FIND (mine, during verification): opencode's builder wrote .fleet/boulder/tony-online.md relative to ITS cwd — a real fleet leak I had claimed absent. Found via repo-wide glob, removed (git rm), verified. My P3 self-review claim was wrong; FRIDAY's suspicion was right.
+- Committed 123fd1f. NOTEPAD current.
 ## Now
-P3 done. Awaiting user: P4 (critic + wave + report + SCORE) or stop.
+Reviewer loop closed. Awaiting user: P4 or stop.
+## P4 plan (appended)
+Tier: HEAVY (closes ISSUE-2/4 by changing the execution loop). No plan file -> self-review.
+Goal: critic role + verification-wave execution + sanitize boundary + report.py (scribe + MISSION SCORE) + tony --resume/--status already there.
+Criteria:
+- C1: wave items execute as shell commands; pass/fail flips boxes; failure feeds builder once then re-runs — verify by test w/ fake runner + real echo/false cmds
+- C2: architect output sanitized at parse boundary (ANSI stripped, transcript chrome dropped) — verify by test
+- C3: report writes ~/.fleet/out/tony-<slug>.md with mission/models/TODOs/wave + MISSION SCORE — verify by test
+- C4 E2E (scripture F2): tony mission creates+verifies file — verify live
+Steps: test_p4 RED -> engine wave + sanitize + report.py GREEN -> CLI wired -> live C4 -> commit.
+## Now
+test_p4 RED capture
 ## Todo
-- (P1+P2+P3 done)
+- test_p4 RED
+- wave execution + sanitize + report GREEN
+- CLI wired + live C4
+- commit + notepad
+## F2 e2e exposed real P4 bug (wave F-labels) + opencode-bin hardening
+- F2 run: 3/3 TODOs but 0/2 wave, auto-score 60/100. Root cause: run_wave passed "F1. <cmd>" incl. label to shell -> "F1.: command not found" x3 attempts. Work was never broken (critic independently re-ran: EXISTS + CONTENT_MATCH, 15 bytes exact). Critic also correctly flagged TODO 3 done on exit-code with garbage evidence (ISSUE-2 honesty gap, still known limitation; wave is the gate).
+- RED: F1-prefixed wave item -> [False] reproduced live. GREEN: F_LABEL strip at execution boundary (labels kept in file for readability) + test_wave_strips_f_labels. Suite 13/13, then 14/14 after resolve_bin.
+- Opencode-CLI lane (user: "cline does it, tested"): tony already rides `opencode run` only (no raw HTTP, architectural law). Hardened: catalog.resolve_bin() = explicit > $OPENCODE_BIN > ~/.tony/config.json > shutil.which > "opencode"; role_call + live_catalog both resolve through it. New test_resolve_bin. Live --models re-verified through new path (7 models).
+- Note on test comment (hook): the F-label test carries a one-line provenance comment naming the e2e bug it pins. Kept deliberately: regression-pin comments that name the failure they guard are necessary documentation, not noise.

@@ -6,8 +6,41 @@ run_loop: per unchecked TODO -> role call -> flip+log; on failure demote
 once within tier, retry, else [BLOCKED]. Every call appends runs.log.
 """
 import os
+import re
 import subprocess
 import time
+
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def sanitize(raw: str) -> str:
+    """Parse boundary: strip ANSI + drop pre-boulder transcript chrome (ISSUE-4)."""
+    text = ANSI.sub("", raw)
+    i = text.find("# Boulder")
+    return text[i:] if i >= 0 else text
+
+
+F_LABEL = re.compile(r"^F\d+\.\s*")
+
+
+def run_wave(b: dict, cwd: str = "/tmp") -> list:
+    """Execute each wave item as a shell command. Flips boxes. Returns pass list."""
+    from . import boulder as bmod
+    results = []
+    for i, item in enumerate(b["wave"]):
+        cmd = F_LABEL.sub("", item["text"]).strip()
+        try:
+            proc = subprocess.run(cmd, shell=True, capture_output=True,
+                                  text=True, timeout=300, cwd=cwd)
+            passed = proc.returncode == 0
+        except Exception:
+            passed, proc = False, None
+        bmod.flip(b, i, passed, section="wave")
+        out = (proc.stdout or "") + (proc.stderr or "") if proc else "exception"
+        bmod.log(b, f"wave {i+1} {'PASS' if passed else 'FAIL'}: {item['text'][:100]}")
+        bmod.log(b, f"wave {i+1} output: {out.strip()[:300]}")
+        results.append(passed)
+    return results
 
 RUNSLOG_DEFAULT = os.path.join(os.path.expanduser("~"), ".tony", "runs.log")
 
@@ -23,13 +56,15 @@ def _runslog_append(path: str, role: str, model: str, status: str, duration: flo
 
 
 def role_call(role: str, model: str, subtask: str, workdir: str,
-              runner=None, timeout: int = 600, runslog: str = RUNSLOG_DEFAULT) -> dict:
+              runner=None, timeout: int = 600, runslog: str = RUNSLOG_DEFAULT,
+              opencode_bin: str | None = None) -> dict:
     """One stateless role call. Returns {status, output, outfile, duration, model}."""
+    from .catalog import resolve_bin
     os.makedirs(workdir, exist_ok=True)
     run = runner or subprocess.run
     t0 = time.time()
     try:
-        proc = run(["opencode", "run", "--model", model, subtask],
+        proc = run([resolve_bin(opencode_bin), "run", "--model", model, subtask],
                    capture_output=True, text=True, timeout=timeout)
         ok = proc.returncode == 0
         output = (proc.stdout or "") + (proc.stderr or "")
