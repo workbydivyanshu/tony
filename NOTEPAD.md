@@ -209,3 +209,8 @@ P5d done. Tree at P5d landing commit.
 ## Gate-path regression pin (2026-09-18, closes F2 honest gap)
 - Extracted apply_critic_gate(b, gate, keep_going, fix_fn, critic_output) into engine.py; cmd_mission calls it with fix_fn as parameter — call-before-def crash structurally impossible.
 - tests/test_gate.py: 4 pins (PASS clean / ISSUES fix-once+hold / keep-going override / None-fix honest hold). Suite 54/54.
+
+## Review hardening pass (2026-09-18, self-review of P5d diff)
+- Real finds: config.validate() dead (no callers, re-read file 6x) -> wired into --show-config stderr; wrong-shape roles (null/str) crashed get_roles/clear_role -> isinstance guards; clear_role wrote a config file on no-op -> early return; save() docstring falsely claimed atomic writes; 2 redundant local imports.
+- 3 regression pins (no-op write, wrong-shape, validate); suite 57/57; live --show-config warning + --clear-role no-file creation verified; ~/.tony/config.json removed after.
+- Note: hermes-agent/ clone in progress inside ~/tony by Vianca (13:49) — left alone, never staged.
