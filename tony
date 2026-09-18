@@ -67,6 +67,8 @@ def cmd_clear_role(role: str) -> int:
 
 def cmd_show_config(_args) -> int:
     models = catalog.live_catalog()
+    for w in config.validate(models):
+        print(f"tony: warning: {w}", file=sys.stderr)
     raw = tiers.assign_roles_with_sources(models, config.get_roles() or None)
     for role, val in raw.items():
         if isinstance(val, dict):
@@ -120,7 +122,6 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
     from lib import engine as eng
     from lib import report as rep
-    from lib import config
     models = catalog.live_catalog()
     overrides = config.get_roles() or None
     raw = tiers.assign_roles_with_sources(models, overrides)
@@ -180,7 +181,6 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
     crash-safe rule). Critic is not re-run; the wave is the gate."""
     from lib import engine as eng
     from lib import report as rep
-    from lib import config
     p = boulder.path_for(slug)
     try:
         b = boulder.load(p)

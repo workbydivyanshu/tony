@@ -32,7 +32,7 @@ def load() -> dict:
 
 
 def save(cfg: dict) -> None:
-    """Atomically write config.json, creating dirs as needed."""
+    """Write config.json, creating dirs as needed."""
     p = config_path()
     os.makedirs(os.path.dirname(p), exist_ok=True)
     with open(p, "w") as f:
@@ -40,7 +40,8 @@ def save(cfg: dict) -> None:
 
 
 def get_roles() -> dict:
-    return load().get("roles", {})
+    roles = load().get("roles", {})
+    return roles if isinstance(roles, dict) else {}
 
 
 def set_role(role: str, pattern: str) -> None:
@@ -55,9 +56,12 @@ def set_role(role: str, pattern: str) -> None:
 
 
 def clear_role(role: str) -> None:
-    """Remove a role. No-op if missing."""
+    """Remove a role. No-op (no write) when missing, no file, or wrong shape."""
     cfg = load()
-    cfg.get("roles", {}).pop(role, None)
+    roles = cfg.get("roles")
+    if not isinstance(roles, dict) or role not in roles:
+        return
+    roles.pop(role)
     save(cfg)
 
 
@@ -71,8 +75,9 @@ def clear_roles() -> None:
 def validate(catalog: list) -> list:
     """Return one warning per role whose pattern matches nothing in catalog."""
     warnings = []
+    roles = get_roles()
     for role, (_tier, _effort) in tiers.ROLES.items():
-        pattern = get_roles().get(role)
+        pattern = roles.get(role)
         if pattern is None:
             continue
         if not any(re.search(pattern, m) for m in catalog):

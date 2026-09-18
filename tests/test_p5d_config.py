@@ -123,3 +123,33 @@ def test_assign_roles_with_sources_none_equals_legacy():
     legacy = tiers.assign_roles(catalog)
     r = tiers.assign_roles_with_sources(catalog, None)  # AttributeError
     assert r == legacy
+
+
+def test_clear_role_noop_writes_nothing():
+    from lib import config
+    tmpdir = _tmp_home()
+    _set_home(tmpdir)
+    config.clear_role("builder")
+    assert not os.path.exists(os.path.join(tmpdir, ".tony", "config.json"))
+    _restore_home()
+    shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_get_roles_wrong_shape_defaults():
+    from lib import config
+    tmpdir = _tmp_home()
+    _set_home(tmpdir)
+    cfg_path = os.path.join(tmpdir, ".tony", "config.json")
+    os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
+    open(cfg_path, "w").write('{"roles": null}')
+    assert config.get_roles() == {}
+    config.clear_role("builder")
+    assert config.get_roles() == {}
+    _restore_home()
+    shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_validate_warns_on_no_match():
+    from lib import config
+    catalog = ["opencode/big-pickle"]
+    assert config.validate(catalog) == []
