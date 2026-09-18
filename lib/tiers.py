@@ -3,6 +3,7 @@
 Patterns, never ids: renames and churn self-heal. Unknown models -> spare tier.
 """
 import re
+import sys
 
 # tier -> ordered id patterns, best first (from scripture Ch.3)
 TIERS = {
@@ -42,19 +43,59 @@ def spare(catalog: list) -> list:
     return sorted(set(catalog) - known)
 
 
-def assign_roles(catalog: list) -> dict:
-    """role -> best model id. Raises if a role's tier is empty."""
+def resolve_override(catalog: list, pattern: str):
+    """First catalog model matching *pattern* via re.search, or None."""
+    for m in catalog:
+        if re.search(pattern, m):
+            return m
+    return None
+
+
+def assign_roles_with_sources(catalog: list, overrides=None):
+    """role -> model with source tracking.
+
+    overrides=None  -> legacy format {role: model_id}  (byte-identical to old assign_roles).
+    overrides=dict  -> enriched format {role: {"model": model_id, "source": ...}}.
+    """
+    if overrides is None:
+        out = {}
+        for role, (tier, _effort) in ROLES.items():
+            picks = pick(catalog, tier)
+            if not picks:
+                fb = spare(catalog)
+                if not fb:
+                    raise RuntimeError(f"no model available for role {role}")
+                out[role] = fb[0]
+            else:
+                out[role] = picks[0]
+        return out
     out = {}
     for role, (tier, _effort) in ROLES.items():
+        pattern = overrides.get(role)
+        if pattern is not None:
+            model = resolve_override(catalog, pattern)
+            if model is not None:
+                out[role] = {"model": model, "source": "override"}
+                continue
+            print(
+                f"tony: role '{role}' pattern '{pattern}' matched nothing live; "
+                "falling back to tier default",
+                file=sys.stderr,
+            )
         picks = pick(catalog, tier)
         if not picks:
             fb = spare(catalog)
             if not fb:
-                raise RuntimeError(f"no model available for role {role}")
-            out[role] = fb[0]
+                continue
+            out[role] = {"model": fb[0], "source": "tier-default"}
         else:
-            out[role] = picks[0]
+            out[role] = {"model": picks[0], "source": "tier-default"}
     return out
+
+
+def assign_roles(catalog: list) -> dict:
+    """role -> best model id. Raises if a role's tier is empty."""
+    return assign_roles_with_sources(catalog, None)
 
 
 def tier_map(catalog: list) -> dict:
