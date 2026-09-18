@@ -214,3 +214,9 @@ P5d done. Tree at P5d landing commit.
 - Real finds: config.validate() dead (no callers, re-read file 6x) -> wired into --show-config stderr; wrong-shape roles (null/str) crashed get_roles/clear_role -> isinstance guards; clear_role wrote a config file on no-op -> early return; save() docstring falsely claimed atomic writes; 2 redundant local imports.
 - 3 regression pins (no-op write, wrong-shape, validate); suite 57/57; live --show-config warning + --clear-role no-file creation verified; ~/.tony/config.json removed after.
 - Note: hermes-agent/ clone in progress inside ~/tony by Vianca (13:49) — left alone, never staged.
+
+## TAKEOVER — VISION resumes from opencode V1 work (2026-09-18 ~15:30)
+- Opencode landed 5 commits after NOTEPAD stopped: b28e128 (ignore clones) → 2f249fc (score.py 40/40/20 + curses tui.py, 77/77) → 9d5c2fa (429 backoff [5,20] + 1MB log rotation, 87/87) → d1aa47c (critic v2 rubric + strict VERDICT + evidence coverage, 109/109) → 5c509a9 (score-central CLI wiring, --tui/--timeout, 131/131).
+- VISION verified, not trusted: full suite EXECUTED 131/131 green (plain-assert runner; unittest loader finds 0 — tests are bare functions, pre-existing style); keyless grep clean (no api_key/Authorization/Bearer); live --models 7 models + role map; --help/--status live.
+- Scripture wave status: F1 ✓ (TONY ONLINE live), F2 ✓ (100/100 re-run), F3/F4 → verifying now (free). Unproven live path: --parallel e2e (P5a deferred payoff) — next live burn.
+- Missing vs scripture flags: --slug auto absent (slug always derived; acceptable, note only). Plan-gates omO-style still P5c+ backlog.
