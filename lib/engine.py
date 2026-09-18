@@ -101,33 +101,68 @@ def run_wave(b: dict, cwd: str = "/tmp") -> list:
     return results
 
 RUNSLOG_DEFAULT = os.path.join(os.path.expanduser("~"), ".tony", "runs.log")
+RUNSLOG_MAX_BYTES = 1_000_000
+
+RATE_LIMIT_SIGNS = ("429", "rate limit", "quota", "overloaded")
+BACKOFF_SECS = (5, 20)
+MAX_BACKOFF_ATTEMPTS = 3
+
+
+def _looks_rate_limited(output: str) -> bool:
+    low = (output or "").lower()
+    return any(s in low for s in RATE_LIMIT_SIGNS)
 
 
 def _runslog_append(path: str, role: str, model: str, status: str, duration: float) -> None:
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with _LOCK, open(path, "a") as f:
-            f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} role={role} model={model} "
-                    f"status={status} dur={duration:.1f}s\n")
+        with _LOCK:
+            try:
+                if os.path.getsize(path) > RUNSLOG_MAX_BYTES:
+                    try:
+                        if os.path.exists(path + ".1"):
+                            os.remove(path + ".1")
+                    except OSError:
+                        pass
+                    os.rename(path, path + ".1")
+            except OSError:
+                pass
+            with open(path, "a") as f:
+                f.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} role={role} model={model} "
+                        f"status={status} dur={duration:.1f}s\n")
     except OSError:
         pass
 
 
 def role_call(role: str, model: str, subtask: str, workdir: str,
               runner=None, timeout: int = 600, runslog: str = RUNSLOG_DEFAULT,
-              opencode_bin: str | None = None) -> dict:
-    """One stateless role call. Returns {status, output, outfile, duration, model}."""
+              opencode_bin: str | None = None, sleep_fn=None) -> dict:
+    """One stateless role call. Returns {status, output, outfile, duration, model}.
+
+    sleep_fn=None (default) preserves legacy single-attempt behavior exactly.
+    With sleep_fn, rate-limit signals trigger bounded same-model retries:
+    initial + 2 retries max, sleeps [5, 20]; the third failure returns fail
+    WITHOUT a third sleep so the caller demotes next. Retries never cross
+    models, so backoff and demote-once-then-BLOCKED compose with no storms.
+    Sleeps run outside _LOCK so parallel explorers never block each other."""
     from .catalog import resolve_bin
     os.makedirs(workdir, exist_ok=True)
     run = runner or subprocess.run
     t0 = time.time()
-    try:
-        proc = run([resolve_bin(opencode_bin), "run", "--model", model, subtask],
-                   capture_output=True, text=True, timeout=timeout)
-        ok = proc.returncode == 0
-        output = (proc.stdout or "") + (proc.stderr or "")
-    except Exception as e:  # runner exploded (timeout, missing binary)
-        ok, output = False, f"role_call exception: {e}"
+    output, ok = "", False
+    max_tries = MAX_BACKOFF_ATTEMPTS if sleep_fn is not None else 1
+    for attempt in range(max_tries):
+        try:
+            proc = run([resolve_bin(opencode_bin), "run", "--model", model, subtask],
+                       capture_output=True, text=True, timeout=timeout)
+            ok = proc.returncode == 0
+            output = (proc.stdout or "") + (proc.stderr or "")
+        except Exception as e:  # runner exploded (timeout, missing binary)
+            ok, output = False, f"role_call exception: {e}"
+        if ok or sleep_fn is None or not _looks_rate_limited(output):
+            break
+        if attempt < max_tries - 1:
+            sleep_fn(BACKOFF_SECS[min(attempt, len(BACKOFF_SECS) - 1)])
     dur = time.time() - t0
     _runslog_append(runslog, role, model, "ok" if ok else "fail", dur)
     with _LOCK:  # outfile numbering must be unique under threaded parallel explorers
@@ -143,7 +178,8 @@ def role_call(role: str, model: str, subtask: str, workdir: str,
 
 
 def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
-              runner=None, runslog: str = RUNSLOG_DEFAULT) -> None:
+              runner=None, runslog: str = RUNSLOG_DEFAULT,
+              sleep_fn=None) -> None:
     """Execute a single TODO by index: role_call -> flip+log; demote once, else [BLOCKED].
 
     Exception guard (review note 5): a filesystem blowup (workdir removed mid-run,
@@ -160,7 +196,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
             return
         model = models[0]
         res = role_call(role, model, todo["text"], workdir, runner=runner,
-                        runslog=runslog)
+                        runslog=runslog, sleep_fn=sleep_fn)
     except Exception as e:  # makedirs/listdir/etc blew up — contain it
         try:
             b["todos"][i]["text"] += " [BLOCKED]"
@@ -176,7 +212,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
         if len(models) > 1:
             model2 = models[1]
             res2 = role_call(role, model2, todo["text"], workdir, runner=runner,
-                             runslog=runslog)
+                             runslog=runslog, sleep_fn=sleep_fn)
             if res2["status"] == "ok":
                 bmod.flip(b, i, True)
                 bmod.log(b, f"TODO {i+1} done on demote via {model2} -> {res2['outfile']}")
@@ -190,7 +226,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
 
 def run_loop(b: dict, tier_models: dict, workdir: str,
              runner=None, runslog: str = RUNSLOG_DEFAULT,
-             parallel: bool = False) -> dict:
+             parallel: bool = False, sleep_fn=None) -> dict:
     """Execute each unchecked TODO; demote+retry once. parallel=True runs
     consecutive [role:explorer] TODOs concurrently via threads (stdlib only);
     every other role stays sequential in index order.
@@ -203,7 +239,8 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
         if not batch:
             return
         with cf.ThreadPoolExecutor(max_workers=len(batch)) as ex:
-            list(ex.map(lambda j: _exec_one(b, j, tier_models, workdir, runner, runslog),
+            list(ex.map(lambda j: _exec_one(b, j, tier_models, workdir, runner, runslog,
+                                        sleep_fn),
                         batch))
         batch.clear()
 
@@ -214,7 +251,7 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
             batch.append(i)
         else:
             flush()
-            _exec_one(b, i, tier_models, workdir, runner, runslog)
+            _exec_one(b, i, tier_models, workdir, runner, runslog, sleep_fn)
     flush()
     return b
 
