@@ -142,6 +142,13 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     boulder.log(b, f"mission started: {mission[:120]}")
     tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
     eng.run_loop(b, tier_models, workdir, parallel=parallel)
+
+    def _builder_fix(fails):
+        fix = eng.role_call("builder", assignments["builder"],
+                            "Fix these failing verification steps, then stop:\n" +
+                            "\n".join(fails), workdir)
+        boulder.log(b, f"builder fix: {fix['status']}")
+
     gate = "N/A"
     if len(b["todos"]) >= 3:
         crit_prompt = ("You are the critic. Plan + outputs follow. Find what is wrong, "
@@ -157,12 +164,6 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
             else:
                 boulder.log(b, "critic gate: ISSUES; holding wave for builder fix")
                 _builder_fix([crit["output"]])
-
-    def _builder_fix(fails):
-        fix = eng.role_call("builder", assignments["builder"],
-                            "Fix these failing verification steps, then stop:\n" +
-                            "\n".join(fails), workdir)
-        boulder.log(b, f"builder fix: {fix['status']}")
 
     eng.verify_wave(b, max_verify=max_verify, fix_fn=_builder_fix) if eng.should_run_wave(b, keep_going) else boulder.log(b, "wave skipped (BLOCKED TODOs; use --keep-going to run anyway)")
     p = boulder.save(slug, b)

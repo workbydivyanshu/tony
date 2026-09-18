@@ -199,3 +199,9 @@ P5c-2 done. Awaiting user: P5d (config system) or stop.
 - Suite 50/50 green. No live model burn (cached `opencode models` reads only). ~/.tony/config.json removed after verification.
 ## Now
 P5d done. Tree at P5d landing commit.
+
+## Hotfix — _builder_fix UnboundLocalError in cmd_mission (live F2 found, 2026-09-18)
+- RED (live): F2 re-proof crashed after builder TODOs with UnboundLocalError — gate block called _builder_fix before its def (missions with >=3 TODOs + critic ISSUES). cmd_resume order was already correct.
+- GREEN: moved def above gate block (mirrors resume); AST order-check both functions OK; suite 50/50; F2 re-run 2/2 TODOs + 2/2 wave (cat + test -f) 100/100, file HELLO FROM TONY exact.
+- Honest gap: re-run had 2 TODOs (critic skipped), so the ISSUES+fix call path itself was proven by AST-order + suite, not re-triggered live.
+- Residue cleared (~/tony-e2e, boulders, workdirs, fleet reports); runs.log kept as ledger.
