@@ -37,8 +37,37 @@ def todo_role(text: str) -> str:
     return "builder"
 
 
+def resolve_role(todo: dict, b: dict | None = None) -> str:
+    """Single precedence for role dispatch (review note 1): explicit todo["role"]
+    wins when valid; else the architect's [role:X] tag; else builder.
+    Unknown tags fall back to builder WITH a boulder log line when b is given
+    (review note 2) so architect typos are visible instead of silent.
+    Callers scanning without a boulder (run_loop batching) pass b=None to stay pure;
+    _exec_one passes b so the fallback is recorded exactly once."""
+    from . import boulder as bmod
+    from . import tiers as tmod
+    explicit = (todo or {}).get("role")
+    if explicit in tmod.ROLES:
+        return explicit
+    m = ROLE_TAG.search((todo or {}).get("text") or "")
+    if m:
+        if m.group(1) in tmod.ROLES:
+            return m.group(1)
+        if b is not None:
+            bmod.log(b, f"unknown [role:{m.group(1)}] -> builder "
+                        f"(typo? valid: {sorted(tmod.ROLES)})")
+        return "builder"
+    return "builder"
+
+
 def run_wave(b: dict, cwd: str = "/tmp") -> list:
-    """Execute each wave item as a shell command. Flips boxes. Returns pass list."""
+    """Execute each wave item as a shell command. Flips boxes. Returns pass list.
+
+    TRUST BOUNDARY (review note 7): wave commands come from the architect, which
+    tony already trusts with TODO text executed via role prompts — same trust.
+    shell=True is intentional for architect ergonomics (pipes, &&, grep -q).
+    Never feed untrusted third-party text here; waves auto-retry with builder
+    fixes, so a malicious command would re-run up to max_verify times."""
     from . import boulder as bmod
     results = []
     for i, item in enumerate(b["wave"]):
@@ -100,18 +129,30 @@ def role_call(role: str, model: str, subtask: str, workdir: str,
 
 def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
               runner=None, runslog: str = RUNSLOG_DEFAULT) -> None:
-    """Execute a single TODO by index: role_call -> flip+log; demote once, else [BLOCKED]."""
+    """Execute a single TODO by index: role_call -> flip+log; demote once, else [BLOCKED].
+
+    Exception guard (review note 5): a filesystem blowup (workdir removed mid-run,
+    listdir raising inside the lock) marks THIS TODO [BLOCKED] instead of aborting
+    the mission via flush() — sequential and parallel modes share the guarantee."""
     from . import boulder as bmod
-    todo = b["todos"][i]
-    role = todo.get("role") or todo_role(todo["text"])
-    models = list(tier_models.get(role, []))
-    if not models:
-        todo["text"] += " [BLOCKED: no model in tier]"
-        bmod.log(b, f"TODO {i+1} BLOCKED (no model)")
+    try:
+        todo = b["todos"][i]
+        role = resolve_role(todo, b)
+        models = list(tier_models.get(role, []))
+        if not models:
+            todo["text"] += " [BLOCKED: no model in tier]"
+            bmod.log(b, f"TODO {i+1} BLOCKED (no model)")
+            return
+        model = models[0]
+        res = role_call(role, model, todo["text"], workdir, runner=runner,
+                        runslog=runslog)
+    except Exception as e:  # makedirs/listdir/etc blew up — contain it
+        try:
+            b["todos"][i]["text"] += " [BLOCKED]"
+        except Exception:
+            pass
+        bmod.log(b, f"TODO {i+1} BLOCKED (exception: {type(e).__name__}: {str(e)[:120]})")
         return
-    model = models[0]
-    res = role_call(role, model, todo["text"], workdir, runner=runner,
-                    runslog=runslog)
     if res["status"] == "ok":
         bmod.flip(b, i, True)
         bmod.log(b, f"TODO {i+1} done via {model} ({res['duration']:.0f}s) -> {res['outfile']}")
@@ -134,10 +175,12 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
 
 def run_loop(b: dict, tier_models: dict, workdir: str,
              runner=None, runslog: str = RUNSLOG_DEFAULT,
-             now_stamp: str | None = None, parallel: bool = False) -> dict:
+             parallel: bool = False) -> dict:
     """Execute each unchecked TODO; demote+retry once. parallel=True runs
     consecutive [role:explorer] TODOs concurrently via threads (stdlib only);
-    every other role stays sequential in index order."""
+    every other role stays sequential in index order.
+    Batch scan uses resolve_role(todo) pure (no log); _exec_one re-resolves with
+    b and records the unknown-tag fallback exactly once (review note 1)."""
     import concurrent.futures as cf
     batch = []
 
@@ -152,7 +195,7 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
     for i, todo in enumerate(b["todos"]):
         if todo["box"]:
             continue
-        if parallel and todo_role(todo["text"]) in PARALLEL_ROLES:
+        if parallel and resolve_role(todo) in PARALLEL_ROLES:
             batch.append(i)
         else:
             flush()
@@ -163,14 +206,24 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
 
 def verify_wave(b: dict, max_verify: int = 3, cwd: str = "/tmp", fix_fn=None) -> list:
     """Wave retry loop (extracted from the CLI so --max-verify is testable).
-    fix_fn(failed_texts) runs after each failed attempt; returns final pass list."""
+    max_verify = TOTAL attempts (min 1 — --max-verify 0 still verifies once).
+    fix_fn(failed_texts) runs between attempts only, never after the final one
+    (review note 3: the old code burned a fix whose output was never re-run).
+    Re-runs execute every wave item fresh, so a prior PASS can un-flip on a
+    later attempt; final results reflect the last run (review note 4)."""
     from . import boulder as bmod
+    total = max(1, max_verify)
     results: list = []
-    for attempt in range(1, max(1, max_verify) + 1):
+    for attempt in range(1, total + 1):
         results = run_wave(b, cwd=cwd)
         if all(results):
             break
-        bmod.log(b, f"wave attempt {attempt} failed; feeding fix")
-        if fix_fn is not None:
-            fix_fn([w["text"] for w, ok in zip(b["wave"], results) if not ok])
+        if attempt < total:
+            if fix_fn is not None:
+                bmod.log(b, f"wave attempt {attempt} failed; feeding fix")
+                fix_fn([w["text"] for w, ok in zip(b["wave"], results) if not ok])
+            else:
+                bmod.log(b, f"wave attempt {attempt} failed; no fix_fn, re-running")
+        else:
+            bmod.log(b, f"wave attempt {attempt} failed; wave exhausted ({total} attempts)")
     return results

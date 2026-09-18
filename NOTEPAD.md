@@ -114,3 +114,34 @@ Criteria:
 - C5: suite all green + keyless grep clean + --help shows flags
 SURFACE: tony --help + --models live. No live model burn (threading proven at seam; live burn unjustified for this slice).
 Teardown: tests use fake runners + echo/false only; per-test tmpdirs removed.
+## 12:4x — P5a GREEN, COMMITTED c4928b2 (+873ce1f hygiene)
+- RED captured: AttributeError todo_role + LSP no-param/no-attr (6 diagnostics) + runtime AttributeError
+- GREEN: 18/18 (14 prior unmodified + 4 new). C1 tag parse; C2 overlap (2x0.5s explorers <0.9s wall, 2 runs.log rows); C3 builders sequential (>=0.9s wall under parallel=True); C4 max_verify=2 -> fix 2x
+- C5: --help shows both flags; keyless grep clean; zero hardcoded ids; live --models 7 models through new code path
+- SURFACE: --help + --models live. No live model burn (threading proven at seam).
+- BONUS FIND (mine): lib/report.py never committed in P4 (tracked-files audit) — fresh clone would crash cmd_mission. Committed 873ce1f + .omo/ gitignored (2 harness strays already in history, left alone — no rewrite).
+- No stray procs (all tests use fake runners + echo/false; tmpdirs removed per-test).
+
+## P5a review disposition (2026-09-18, FRIDAY read-only -> VISION verify)
+- Verdict: PASS unconditional, 0 ISSUES, 8 notes. Report: ~/.fleet/out/tony-p5a-review.md.
+- VISION re-verified: suite EXECUTED 18/18 GREEN (closes FRIDAY's read-only gap); report.py committed-identical (cmp); secrets grep clean (no api_key/Auth/Bearer/raw-HTTP); empty wave -> [] vacuous pass; max_verify=0 runs once (Note, no criterion defines 0-semantics).
+- _exec_one demote branches match old inline loop; tag-dispatch delta intended. Notes 1-8 accepted as P5b+ backlog, none criterion-breaking. No code changed in this step.
+
+## P5b plan (appended) — review-notes hardening, no live burn
+Tier: LIGHT (single-file engine slice, all context loaded; no plan file -> self-review).
+Goal: close FRIDAY's 8 P5a notes (tony-p5a-review.md): shared resolve_role (n1),
+unknown-tag log (n2), verify_wave last-fix gate + 0-semantics + None-log (n3/n4),
+parallel abort containment (n5), timing margins (n6), shell=True trust comment (n7),
+drop now_stamp (n8). --resume/TUI/watch/plan-gates stay P5c+.
+Criteria:
+- C1: resolve_role precedence (explicit > tag > builder) + single log line — test
+- C2: max_verify=N buys N attempts and N-1 fixes; fix_fn=None honest log — test
+- C3: one TODO fs blowup -> [BLOCKED], mission continues — test
+- C4: all 18 prior tests pass (2 updated for new semantics/margins) — suite
+- C5: keyless grep clean, zero hardcoded ids, live --models 7 models, --help text
+SURFACE: --help + --models live. No live model burn (fake runners + echo/false).
+## 12:2x — P5b GREEN, 23/23
+- RED captured: no resolve_role + silent unknown tag + fix 2x on max_verify=2 + misleading 'feeding fix' with fix_fn=None + dead now_stamp
+- GREEN: 23/23 (18 prior: 16 unmodified, test_p5 timing margins 0.5->0.6s/0.9->1.0s + max_verify fix-count 2->1; 5 new in test_p5b.py)
+- C5: keyless clean, no hardcoded ids, --help shows new text, live catalog 7 models + role map through new code
+- LSP flagged todo_role/resolve_role/parallel/verify_wave as unknown — stale cache, disproven by direct import (all True) + 23/23 execution

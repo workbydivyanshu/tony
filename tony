@@ -127,7 +127,7 @@ def main(argv=None) -> int:
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + boulders")
     p.add_argument("--dry-run", metavar="MISSION", default=None, help="plan only, write boulder, execute nothing")
     p.add_argument("--parallel", action="store_true", help="run [role:explorer] TODOs concurrently via threads")
-    p.add_argument("--max-verify", metavar="N", type=int, default=3, help="wave fix-retry attempts (default 3)")
+    p.add_argument("--max-verify", metavar="N", type=int, default=3, help="total wave attempts (default 3); fixes run between attempts only")
     p.add_argument("mission", nargs="?", default=None, help="one-shot mission text")
     args = p.parse_args(argv)
     if args.version:

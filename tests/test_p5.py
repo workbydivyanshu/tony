@@ -12,7 +12,7 @@ def test_role_tag_parse():
 
 
 def _slow_ok(cmd, **kw):
-    time.sleep(0.5)
+    time.sleep(0.6)
     class R: returncode = 0; stdout = "OK\n"; stderr = ""
     return R()
 
@@ -31,7 +31,7 @@ def test_parallel_explorers_overlap(tmpdir="/tmp/tony-test-p5par"):
                     runslog=os.path.join(tmpdir, "runs.log"), parallel=True)
     wall = time.time() - t0
     assert all(t["box"] for t in b["todos"]), b["todos"]
-    assert wall < 0.9, f"no overlap: {wall:.2f}s"
+    assert wall < 1.0, f"no overlap: {wall:.2f}s"
     rows = open(os.path.join(tmpdir, "runs.log")).read().strip().splitlines()
     assert len(rows) == 2 and all("ok" in r for r in rows), rows
     shutil.rmtree(tmpdir, ignore_errors=True)
@@ -50,7 +50,7 @@ def test_builders_stay_sequential(tmpdir="/tmp/tony-test-p5seq"):
                     runslog=os.path.join(tmpdir, "runs.log"), parallel=True)
     wall = time.time() - t0
     assert all(t["box"] for t in b["todos"]), b["todos"]
-    assert wall >= 0.9, f"builders must stay sequential: {wall:.2f}s"
+    assert wall >= 1.0, f"builders must stay sequential: {wall:.2f}s"
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 
@@ -63,5 +63,6 @@ def test_verify_wave_max_verify(tmpdir="/tmp/tony-test-p5wave"):
     calls = {"n": 0}
     res = engine.verify_wave(b, max_verify=2, cwd=tmpdir,
                              fix_fn=lambda fails: calls.__setitem__("n", calls["n"] + 1))
-    assert res == [False] and calls["n"] == 2, (res, calls)
+    # gated: fix runs between attempts only, never after the final one (note 3)
+    assert res == [False] and calls["n"] == 1, (res, calls)
     shutil.rmtree(tmpdir, ignore_errors=True)
