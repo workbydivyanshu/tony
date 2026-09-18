@@ -280,3 +280,43 @@ Teardown: fake input_fn only; per-test tmpdirs removed; no procs.
 - Suite RE-EXECUTED 137/137 green (16 modules, plain-assert runner). F4 keyless grep zero hits (lib/tony/tests). --status JSON valid, 7 live models.
 - Boulder tony-v01.md: TODO 6 + F4 flipped. All 4 wave items green. Tagging v0.1 now.
 - Vianca order: finish tony first, then aubade. v0.2 scope = MCP tools via opencode + TUI polish.
+
+## P6 (v0.2 MCP tools via opencode's own tool support) — plan (2026-09-18)
+Findings (recon, live):
+- `opencode run` has NO --mcp flag (only --pure/--agent/--model/--dir). MCP servers ride opencode.json "mcp" + plugin lane; `opencode mcp list` live = 5 connected (websearch, context7, grep_app, lsp, playwright). Delegates inherit MCP automatically — critic transcripts already show tool calls (Read/bash).
+- So P6 is NOT plumbing (nothing to plumb) — it is visibility + planner-awareness: lib/mcp.py parser, --mcp-status/--status(mcp), architect prompt carries server list, one live proof that a delegate used an MCP tool.
+Tier: LIGHT (stdlib parser + 2 CLI wirings + prompt line; no plan file -> self-review).
+Goal: planner knows MCP tools exist; operator sees them; one live mission proves a delegate used one.
+Criteria:
+- C1: lib/mcp.py parses REAL `opencode mcp list` output (ANSI included) -> [{name, connected}] for all 5 — test on captured sample
+- C2: `tony --mcp-status` prints 5 live; `--status` JSON gains "mcp" key — live stdout
+- C3: architect_prompt includes MCP server names (planner-aware) — test asserts names in prompt
+- C4: suite all green + keyless grep clean + zero hardcoded model IDs
+SURFACE: live --mcp-status + --status; one fast-model live mission using an MCP tool (context7/websearch), wave green.
+Teardown: fake runner + captured sample in tests; live proof residue (workdir/boulder/report) logged; no procs left.
+
+## P6 GREEN + SURFACE (2026-09-18 ~16:44-16:54, VISION)
+- GREEN: suite 139/139 (137 prior untouched + 2 new test_p6_mcp). KEYLESS-CLEAN. Live --mcp-status 5 connected; --status JSON gains "mcp" key. Committed be71ce9.
+- SURFACE LIVE (slug use-your-websearch-mcp-tool-to-find-the-current-, --yes, free models only):
+  - Researcher (muse-spark) invoked Exa Web Search (websearch MCP) live, found 3.14.7 with python.org sources. MCP-USE PROVEN (transcript trace, run 1 AND run 2).
+  - Builder wrote stale 3.14.4 from memory. Critic: VERDICT ISSUES ("Exa claims 3.14.7 — conflicts with built file 3.14.4"). Builder fix loop repaired -> PYTHONGREEN 3.14.7. Wave 3/3 PASS. MISSION SCORE 80/100.
+  - VISION independently websearched python.org: 3.14.7 (Aug 5 2026) confirmed. File correct.
+- PROCESS LESSON: first e2e parent reaped by harness tool-timeout (nohup-in-timed-call dies with the group; empty log + dead PID + no boulder, delegates' work survived on disk). Relaunched via setsid + stdin-closed -> survived to verdict. Rule: long missions launch with setsid, never sleep inside the launch call.
+- Residue: pygreen.txt (verified) kept; stale pyver.txt (dead run, wrong version) removed. Boulder + report on disk.
+
+## P7 (v0.2 release triage + tag) — plan (2026-09-18)
+Tier: LIGHT (verify-only, no code; no plan file -> self-review).
+Goal: prove v0.2 shippable and tag it. v0.2 = v0.1 + P6 (MCP visibility + planner-awareness). Textual TUI explicitly DECLINED (stdlib-only law; curses ships and works — polish only, never a release gate).
+Criteria:
+- C1: full suite green (all test_ fns across tests/*.py, plain-assert runner)
+- C2: keyless grep clean (no api_key/Authorization/Bearer in lib/tony/tests) + zero hardcoded opencode/<id> literals in lib
+- C3: live --models (7 free models + role map) + --status JSON valid with mcp key + --mcp-status 5 connected
+- C4: tag v0.2 on the verification commit; tree clean after
+SURFACE: live CLI outputs. No live model burn (P6 already proved MCP-use live at 80/100; re-burning free-tier quota for a tag adds no evidence).
+Teardown: suite uses fake runners + echo/false only; no procs.
+
+## P7 GREEN + v0.2 TAG (2026-09-18, VISION)
+- C1: suite 139/139 green (17 modules, plain-assert runner incl. defaulted params; stderr noise = expected fallback-path prints, not failures)
+- C2: keyless grep zero hits (lib/tony/tests); zero opencode/<id> literals in lib (patterns only, by design)
+- C3: --models 7 live + role map; --status JSON valid with mcp key (5 servers); --mcp-status 5 connected
+- C4: tagging v0.2 now. No live model burn (P6 proved MCP-use live 80/100; re-burn adds no evidence).
