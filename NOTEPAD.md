@@ -189,3 +189,13 @@ Teardown: fake runners + echo/false only; per-test tmpdirs removed; no procs.
 - Suite 42/42 green. No live model burn.
 ## Now
 P5c-2 done. Awaiting user: P5d (config system) or stop.
+
+## P5d — per-role model config + auto-setter (2026-09-18)
+- RED: tests/test_p5d_config.py, 8 tests (5 ImportError lib.config + 3 AttributeError assign_roles_with_sources). Fixed shared-tmpdir flake (stale /tmp/tony-test-p5d-home corrupt json) — hermeticity note for future tests.
+- GREEN: lib/config.py (load/save/get_roles/set_role/clear_role/clear_roles/validate, $HOME at call time, KeyError/re.error fail-fast, corrupt→stderr+defaults).
+- Tiers: resolve_override + assign_roles_with_sources (None→legacy-identical, dict→enriched {model,source}); enriched path skips (not raises) on empty-tier+empty-spare; legacy path keeps RuntimeError. --models map byte-identical with no config.
+- CLI: --set-role/--clear-role/--show-config/--auto-config + [override] marks; malformed→exit 2 pre-write; no-match→stderr fallback; corrupt config→warn+defaults exit 0.
+- Contract live: H1 set+show (override) / H2 --models mark / H3 auto-config preserves opencode_bin; E1 no-match fallback / E2 bad regex exit 2 / E3 unknown role exit 2 / E4 corrupt warn+proceed; R1 legacy identity / R2 50/50 green / R3 keyless + patterns-only greps clean.
+- Suite 50/50 green. No live model burn (cached `opencode models` reads only). ~/.tony/config.json removed after verification.
+## Now
+P5d done. Tree at P5d landing commit.
