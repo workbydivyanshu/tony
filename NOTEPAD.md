@@ -145,3 +145,15 @@ SURFACE: --help + --models live. No live model burn (fake runners + echo/false).
 - GREEN: 23/23 (18 prior: 16 unmodified, test_p5 timing margins 0.5->0.6s/0.9->1.0s + max_verify fix-count 2->1; 5 new in test_p5b.py)
 - C5: keyless clean, no hardcoded ids, --help shows new text, live catalog 7 models + role map through new code
 - LSP flagged todo_role/resolve_role/parallel/verify_wave as unknown — stale cache, disproven by direct import (all True) + 23/23 execution
+
+## P5c-1 plan (appended) — --resume + --keep-going (mission continuity; replaces Hermes/Cline session resume)
+Tier: LIGHT (CLI + 2 engine helpers, all context loaded; no plan file -> self-review).
+Goal: tony --resume <slug> loads ~/.tony/boulders/<slug>.md and continues from first unchecked box (no second architect call, no extra model burn on resume path itself); --keep-going controls wave gating on BLOCKED TODOs.
+Direction note (user order): tony replaces hermes+cline+opencode+omo (kept, unused). Mapping holds: OMO discipline embedded, opencode CLI only transport, Cline keyless pattern mirrored, Hermes fleet citizenship. No design change.
+Criteria:
+- C1: resume skips checked boxes, executes only unchecked (fake-runner proof, no live burn)
+- C2: BLOCKED gate — has_blocked/should_run_wave: blocked+no-flag -> wave skipped; blocked+--keep-going -> wave runs; clean -> wave runs either way
+- C3: save/load round-trip preserves boxes (resume fidelity on disk)
+- C4: full suite green + keyless clean + --help shows flags + live --models 7 models
+SURFACE: --help + --models live + on-disk boulder round-trip. No live model burn (resume e2e would spend calls; seam proof is the faithful evidence for continuity).
+Teardown: fake runners + echo/false only; per-test tmpdirs removed; no procs.

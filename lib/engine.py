@@ -26,6 +26,21 @@ def sanitize(raw: str) -> str:
 F_LABEL = re.compile(r"^F\d+\.\s*")
 ROLE_TAG = re.compile(r"\[role:(\w+)\]")
 PARALLEL_ROLES = ("explorer",)
+BLOCKED_TAG = "[BLOCKED]"
+
+
+def has_blocked(b: dict) -> bool:
+    """True when any TODO carries a [BLOCKED] marker (demote-exhausted or contained exception)."""
+    return any(BLOCKED_TAG in (t.get("text") or "") for t in b.get("todos", []))
+
+
+def should_run_wave(b: dict, keep_going: bool = False) -> bool:
+    """Wave gate for --keep-going: clean boulders always run the wave;
+    BLOCKED boulders run it only with keep_going=True, otherwise the wave
+    is skipped and the report scores the TODOs alone."""
+    if not has_blocked(b):
+        return True
+    return bool(keep_going)
 
 
 def todo_role(text: str) -> str:
