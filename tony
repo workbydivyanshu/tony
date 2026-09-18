@@ -368,6 +368,33 @@ def cmd_watch(slug: str, interval: int = 2, once: bool = False, timeout: int = 0
 
 
 
+def cmd_daemon(inbox: str | None, interval: int = 10, once: bool = False,
+               parallel: bool = False, max_verify: int = 3,
+               keep_going: bool = False, timeout: int = 600) -> int:
+    """Resident inbox loop: ~/.tony/inbox/*.md -> cmd_mission -> inbox-done/."""
+    from lib import daemon as daemon_mod
+    box = inbox or daemon_mod.inbox_dir()
+    os.makedirs(box, exist_ok=True)
+
+    def _mission(text: str, stem: str) -> str:
+        rc = cmd_mission((text or "").strip() or stem, parallel=parallel,
+                         max_verify=max_verify, keep_going=keep_going,
+                         timeout=timeout, yes=True)
+        return f"cmd_mission exit={rc} (see boulder/report for {stem})"
+
+    if once:
+        res = daemon_mod.run_once(box, _mission)
+        if res is None:
+            print(f"tony: inbox empty ({box})")
+            return 0
+        print(f"tony: daemon-once {res['name']} -> {res['status']} ({res['report_path']})")
+        return 0
+    print(f"tony: daemon listening on {box} (Ctrl-C to stop)")
+    n = daemon_mod.loop(box, _mission, interval=interval)
+    print(f"tony: daemon stopped after {n} job(s)")
+    return 0
+
+
 def main(argv=None) -> int:
     argv = argv or sys.argv[1:]
     p = argparse.ArgumentParser(prog="tony", description="free-model-native agent CLI")
@@ -388,6 +415,10 @@ def main(argv=None) -> int:
     p.add_argument("--yes", action="store_true", help="skip the pre-execution plan gate (default: TTY missions pause for y/N)")
     p.add_argument("--watch", metavar="SLUG", default=None, help="poll <slug> boulder progress")
     p.add_argument("--tui", metavar="SLUG", default=None, help="curses TUI for <slug> (falls back to poll loop when no TTY)")
+    p.add_argument("--daemon", action="store_true", help="resident inbox loop on ~/.tony/inbox (Ctrl-C to stop)")
+    p.add_argument("--daemon-once", action="store_true", help="run a single inbox mission then exit")
+    p.add_argument("--inbox", metavar="PATH", default=None, help="inbox dir for --daemon (default ~/.tony/inbox)")
+    p.add_argument("--interval", metavar="N", type=int, default=10, help="daemon poll interval in seconds (default 10)")
     p.add_argument("--timeout", metavar="N", type=int, default=600, help="role-call timeout in seconds (default 600)")
     p.add_argument("--set-role", metavar="ROLE=PATTERN", default=None, help="pin role to a live-model regex pattern")
     p.add_argument("--clear-role", metavar="ROLE", default=None, help="drop a role override")
@@ -439,6 +470,10 @@ def main(argv=None) -> int:
         return cmd_auto_config(args)
     if args.resume:
         return cmd_resume(args.resume, parallel=args.parallel, max_verify=args.max_verify,
+                          keep_going=args.keep_going, timeout=args.timeout)
+    if args.daemon or args.daemon_once:
+        return cmd_daemon(args.inbox, interval=args.interval, once=args.daemon_once,
+                          parallel=args.parallel, max_verify=args.max_verify,
                           keep_going=args.keep_going, timeout=args.timeout)
     if args.mcp_status:
         return cmd_mcp_status(args)

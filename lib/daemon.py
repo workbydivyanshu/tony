@@ -1,0 +1,115 @@
+"""daemon.py — resident inbox loop (Hermes-replacement step 3). Stdlib only.
+
+Inbox: ~/.tony/inbox/*.md (one mission per file; file content = mission text).
+Claim: atomic rename to <name>.md.claimed so two daemons never run one job.
+Done: ~/.tony/inbox-done/<name>.done.md holds the mission report.
+
+run_once(inbox, mission_fn, home) executes the oldest pending mission via
+mission_fn(text, stem) -> report string. loop() polls until stop_after jobs
+or KeyboardInterrupt. Live CLI wires mission_fn to cmd_mission (headless,
+--yes); tests inject fakes — no model burn at the seam.
+"""
+import os
+import time
+
+CLAIMED_SUFFIX = ".claimed"
+
+
+def inbox_dir(home: str | None = None) -> str:
+    base = home or os.path.expanduser("~")
+    return os.path.join(base, ".tony", "inbox")
+
+
+def done_dir(home: str | None = None) -> str:
+    base = home or os.path.expanduser("~")
+    return os.path.join(base, ".tony", "inbox-done")
+
+
+def list_pending(inbox: str) -> list:
+    """Sorted pending mission paths. Skips claimed/done/hidden files."""
+    try:
+        names = sorted(os.listdir(inbox))
+    except OSError:
+        return []
+    out = []
+    for n in names:
+        if not n.endswith(".md"):
+            continue
+        if n.endswith(CLAIMED_SUFFIX + ".md") or n.endswith(".claimed"):
+            continue
+        if n.endswith(".done.md"):
+            continue
+        if n.startswith("."):
+            continue
+        out.append(os.path.join(inbox, n))
+    return out
+
+
+def claim(path: str) -> str:
+    """Atomically claim a mission file. Returns the claimed path."""
+    dest = path + CLAIMED_SUFFIX
+    os.rename(path, dest)
+    return dest
+
+
+def _stem(path: str) -> str:
+    base = os.path.basename(path)
+    return base[:-3] if base.endswith(".md") else base
+
+
+def run_once(inbox: str, mission_fn, home: str | None = None) -> dict | None:
+    """Execute the oldest pending mission. Empty inbox -> None (noop)."""
+    pending = list_pending(inbox)
+    if not pending:
+        return None
+    src = pending[0]
+    stem = _stem(src)
+    claimed = claim(src)
+    try:
+        with open(claimed) as f:
+            text = f.read()
+    except OSError as e:
+        try:
+            os.rename(claimed, src)  # release: claimed files are invisible to list_pending
+        except OSError:
+            pass
+        return {"name": stem, "status": f"read-fail: {e}", "report_path": None}
+    try:
+        report = mission_fn(text, stem)
+        status = "ok"
+    except Exception as e:  # one job's blowup never kills the daemon
+        report = f"mission failed: {e}"
+        status = "fail"
+    ddir = done_dir(home)
+    os.makedirs(ddir, exist_ok=True)
+    rpath = os.path.join(ddir, stem + ".done.md")
+    try:
+        with open(rpath, "w") as f:
+            f.write(f"# {stem} — {status}\n\n{report}\n")
+    except OSError:
+        rpath = None
+    try:
+        os.remove(claimed)
+    except OSError:
+        pass
+    return {"name": stem, "status": status, "report_path": rpath}
+
+
+def loop(inbox: str, mission_fn, interval: int = 10, stop_after: int | None = None,
+         sleep_fn=None, home: str | None = None) -> int:
+    """Poll until stop_after jobs done (None = forever). Returns jobs run."""
+    _sleep = sleep_fn or time.sleep
+    done = 0
+    while True:
+        res = run_once(inbox, mission_fn, home=home)
+        if res is not None:
+            done += 1
+            if stop_after is not None and done >= stop_after:
+                return done
+            continue
+        if stop_after is not None and done >= stop_after:
+            return done
+        try:
+            _sleep(interval)
+        except KeyboardInterrupt:
+            return done
