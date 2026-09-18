@@ -12,10 +12,15 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import boulder, catalog, config, roles, tiers, watch  # noqa: E402
+from lib import boulder, catalog, config, roles, score as score_mod, tiers, watch  # noqa: E402
 
 VERSION = "0.1.0-p1"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
+
+
+def cmd_score(b: dict, gate: str, evidence: float | None = None) -> int:
+    """Centralized score computation via score.compute. Returns int score."""
+    return score_mod.compute(b, gate, evidence)["score"]
 
 
 def open_boulders() -> list:
@@ -118,7 +123,7 @@ def cmd_dryrun(mission: str) -> int:
 
 
 def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
-                keep_going: bool = False) -> int:
+                keep_going: bool = False, timeout: int = 600) -> int:
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
     from lib import engine as eng
     from lib import report as rep
@@ -131,7 +136,8 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     print(f"tony: mission '{mission[:80]}' -> slug {slug}")
     print(f"tony: architect = {assignments['architect']}")
     arch = eng.role_call("architect", assignments["architect"],
-                         roles.architect_prompt(mission), workdir)
+                         roles.architect_prompt(mission), workdir,
+                         timeout=timeout)
     print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
     if arch["status"] != "ok":
         print("tony: architect failed; boulder unwritten")
@@ -142,39 +148,40 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
         boulder.add_todo(b, clean[:400])
     boulder.log(b, f"mission started: {mission[:120]}")
     tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
-    eng.run_loop(b, tier_models, workdir, parallel=parallel)
+    eng.run_loop(b, tier_models, workdir, parallel=parallel,
+                 sleep_fn=time.sleep, timeout=timeout)
 
     def _builder_fix(fails):
         fix = eng.role_call("builder", assignments["builder"],
                             "Fix these failing verification steps, then stop:\n" +
-                            "\n".join(fails), workdir)
+                            "\n".join(fails), workdir, timeout=timeout)
         boulder.log(b, f"builder fix: {fix['status']}")
 
     gate = "N/A"
+    evidence = None
     if len(b["todos"]) >= 3:
-        crit_prompt = ("You are the critic. Plan + outputs follow. Find what is wrong, "
-                       "missing, or unverified. Output PASS or ISSUES: <list>.\n\n" +
-                       boulder.render(b))
-        crit = eng.role_call("critic", assignments["critic"], crit_prompt, workdir)
+        crit_prompt = roles.critic_prompt(boulder.render(b))
+        crit = eng.role_call("critic", assignments["critic"], crit_prompt, workdir,
+                             timeout=timeout)
         boulder.log(b, f"critic ({assignments['critic']}): {crit['output'][:300]}")
-        gate = eng.apply_critic_gate(b, eng.critic_gate(crit["output"]), keep_going,
+        gate_detail, _strong = eng.critic_gate_detail(crit["output"])
+        evidence = eng.evidence_coverage(crit["output"], b["todos"])
+        gate = eng.apply_critic_gate(b, gate_detail, keep_going,
                                      fix_fn=_builder_fix, critic_output=crit["output"])
 
     eng.verify_wave(b, max_verify=max_verify, fix_fn=_builder_fix) if eng.should_run_wave(b, keep_going) else boulder.log(b, "wave skipped (BLOCKED TODOs; use --keep-going to run anyway)")
     p = boulder.save(slug, b)
-    done = sum(1 for t in b["todos"] if t["box"])
-    waved = sum(1 for w in b["wave"] if w["box"])
-    score = int(100 * (done + waved) / max(1, len(b["todos"]) + len(b["wave"])))
+    score = cmd_score(b, gate, evidence)
     rp = rep.write(os.path.expanduser("~/.fleet/out"), slug, mission,
                    assignments, b, score, f"auto-scored by wave+todo completion; critic gate: {gate}")
-    print(f"tony: boulder {p} — {done}/{len(b['todos'])} TODOs, {waved}/{len(b['wave'])} wave")
+    print(f"tony: boulder {p} — {sum(1 for t in b['todos'] if t['box'])}/{len(b['todos'])} TODOs, {sum(1 for w in b['wave'] if w['box'])}/{len(b['wave'])} wave")
     print(f"tony: report {rp}")
     print(f"MISSION SCORE: {score}/100 — auto-scored by wave+todo completion")
     return 0
 
 
 def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
-               keep_going: bool = False) -> int:
+               keep_going: bool = False, timeout: int = 600) -> int:
     """Resume: load ~/.tony/boulders/<slug>.md, run unchecked TODOs + wave + report.
 
     No second architect call — continuity lives in the boulder (scripture Ch.2
@@ -201,21 +208,20 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
     def _builder_fix(fails):
         fix = eng.role_call("builder", assignments["builder"],
                             "Fix these failing verification steps, then stop:\n" +
-                            "\n".join(fails), workdir)
+                            "\n".join(fails), workdir, timeout=timeout)
         boulder.log(b, f"builder fix: {fix['status']}")
 
-    eng.run_loop(b, tier_models, workdir, parallel=parallel)
+    eng.run_loop(b, tier_models, workdir, parallel=parallel,
+                 sleep_fn=time.sleep, timeout=timeout)
     if eng.should_run_wave(b, keep_going):
         eng.verify_wave(b, max_verify=max_verify, fix_fn=_builder_fix)
     else:
         boulder.log(b, "wave skipped (BLOCKED TODOs; use --keep-going to run anyway)")
     p = boulder.save(slug, b)
-    done = sum(1 for t in b["todos"] if t["box"])
-    waved = sum(1 for w in b["wave"] if w["box"])
-    score = int(100 * (done + waved) / max(1, len(b["todos"]) + len(b["wave"])))
+    score = cmd_score(b, "N/A")
     rp = rep.write(os.path.expanduser("~/.fleet/out"), slug, f"resume: {b['title']}",
                    assignments, b, score, "resume: auto-scored by wave+todo completion")
-    print(f"tony: resumed {p} — {done}/{len(b['todos'])} TODOs, {waved}/{len(b['wave'])} wave")
+    print(f"tony: resumed {p} — {sum(1 for t in b['todos'] if t['box'])}/{len(b['todos'])} TODOs, {sum(1 for w in b['wave'] if w['box'])}/{len(b['wave'])} wave")
     print(f"tony: report {rp}")
     print(f"MISSION SCORE: {score}/100 — resume: auto-scored by wave+todo completion")
     return 0
@@ -296,6 +302,8 @@ def main(argv=None) -> int:
     p.add_argument("--resume", metavar="SLUG", default=None, help="resume boulder <slug>: run unchecked TODOs + wave, no second architect call")
     p.add_argument("--keep-going", action="store_true", help="run the wave even with [BLOCKED] TODOs (default: wave skipped when blocked)")
     p.add_argument("--watch", metavar="SLUG", default=None, help="poll <slug> boulder progress")
+    p.add_argument("--tui", metavar="SLUG", default=None, help="curses TUI for <slug> (falls back to poll loop when no TTY)")
+    p.add_argument("--timeout", metavar="N", type=int, default=600, help="role-call timeout in seconds (default 600)")
     p.add_argument("--set-role", metavar="ROLE=PATTERN", default=None, help="pin role to a live-model regex pattern")
     p.add_argument("--clear-role", metavar="ROLE", default=None, help="drop a role override")
     p.add_argument("--show-config", action="store_true", help="print effective role->model map with sources")
@@ -324,6 +332,18 @@ def main(argv=None) -> int:
         wp.add_argument("--timeout", type=int, default=0, help="exit after S seconds (0=never)")
         wargs = wp.parse_args(argv[wi + 1:])
         return cmd_watch(wargs.slug, interval=wargs.interval, once=wargs.once, timeout=wargs.timeout)
+    if args.tui:
+        from lib import tui as tui_mod
+        tui_idx = argv.index("--tui")
+        tui_slug = argv[tui_idx + 1] if tui_idx + 1 < len(argv) else None
+        if not tui_slug:
+            print("tony: --tui requires a slug", file=sys.stderr)
+            return 2
+        if tui_mod.should_use_curses():
+            return tui_mod.run_tui(tui_slug)
+        else:
+            print(f"tony: --tui: no TTY available; falling back to poll loop for '{tui_slug}'")
+            return cmd_watch(tui_slug)
     if args.set_role:
         return cmd_set_role(args.set_role)
     if args.clear_role:
@@ -334,14 +354,14 @@ def main(argv=None) -> int:
         return cmd_auto_config(args)
     if args.resume:
         return cmd_resume(args.resume, parallel=args.parallel, max_verify=args.max_verify,
-                          keep_going=args.keep_going)
+                          keep_going=args.keep_going, timeout=args.timeout)
     if args.status:
         return cmd_status(args)
     if args.dry_run:
         return cmd_dryrun(args.dry_run)
     if args.mission:
         return cmd_mission(args.mission, parallel=args.parallel, max_verify=args.max_verify,
-                           keep_going=args.keep_going)
+                           keep_going=args.keep_going, timeout=args.timeout)
     return cmd_models(args)
 
 

@@ -179,7 +179,7 @@ def role_call(role: str, model: str, subtask: str, workdir: str,
 
 def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
               runner=None, runslog: str = RUNSLOG_DEFAULT,
-              sleep_fn=None) -> None:
+              sleep_fn=None, timeout: int = 600) -> None:
     """Execute a single TODO by index: role_call -> flip+log; demote once, else [BLOCKED].
 
     Exception guard (review note 5): a filesystem blowup (workdir removed mid-run,
@@ -196,7 +196,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
             return
         model = models[0]
         res = role_call(role, model, todo["text"], workdir, runner=runner,
-                        runslog=runslog, sleep_fn=sleep_fn)
+                        timeout=timeout, runslog=runslog, sleep_fn=sleep_fn)
     except Exception as e:  # makedirs/listdir/etc blew up — contain it
         try:
             b["todos"][i]["text"] += " [BLOCKED]"
@@ -212,7 +212,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
         if len(models) > 1:
             model2 = models[1]
             res2 = role_call(role, model2, todo["text"], workdir, runner=runner,
-                             runslog=runslog, sleep_fn=sleep_fn)
+                             timeout=timeout, runslog=runslog, sleep_fn=sleep_fn)
             if res2["status"] == "ok":
                 bmod.flip(b, i, True)
                 bmod.log(b, f"TODO {i+1} done on demote via {model2} -> {res2['outfile']}")
@@ -226,7 +226,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
 
 def run_loop(b: dict, tier_models: dict, workdir: str,
              runner=None, runslog: str = RUNSLOG_DEFAULT,
-             parallel: bool = False, sleep_fn=None) -> dict:
+             parallel: bool = False, sleep_fn=None, timeout: int = 600) -> dict:
     """Execute each unchecked TODO; demote+retry once. parallel=True runs
     consecutive [role:explorer] TODOs concurrently via threads (stdlib only);
     every other role stays sequential in index order.
@@ -240,7 +240,7 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
             return
         with cf.ThreadPoolExecutor(max_workers=len(batch)) as ex:
             list(ex.map(lambda j: _exec_one(b, j, tier_models, workdir, runner, runslog,
-                                        sleep_fn),
+                                        sleep_fn, timeout),
                         batch))
         batch.clear()
 
@@ -251,7 +251,7 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
             batch.append(i)
         else:
             flush()
-            _exec_one(b, i, tier_models, workdir, runner, runslog, sleep_fn)
+            _exec_one(b, i, tier_models, workdir, runner, runslog, sleep_fn, timeout)
     flush()
     return b
 
