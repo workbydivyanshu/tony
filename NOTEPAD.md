@@ -407,3 +407,8 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 
 
 
+
+## P11 — scheduler + claim reaper (2026-09-18 ~23:15, FRIDAY)
+- Built lib/sched.py (cron */,-steps, dow/month names, dom/dow OR, next_run, schedule.json + minute-ledger, missed windows skipped) + daemon reap_stale_claims(30min) + run_once schedule hook + --add/--list/--rm-schedule flags.
+- Tests: 12 new test_sched.py (Feb30-never, */15, dow names, fake-clock due-scan) + 3 in test_daemon.py (stale-reap, fresh-untouched, run_once-fires-due). Suite 180/180, keyless grep clean.
+- P14 verified present (unit enabled+active, no rebuild). Live: p11proof added 2min out, daemon fired sched-p11proof at 23:12 via stub (zero model burn), ledger-guarded second pass None, schedule removed.

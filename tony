@@ -458,6 +458,55 @@ def cmd_watch(slug: str, interval: int = 2, once: bool = False, timeout: int = 0
 
 
 
+def cmd_add_schedule(spec: str) -> int:
+    """--add-schedule "NAME :: CRON :: MISSION" (or "CRON :: MISSION",
+    name slugified from the mission). Validates the cron before writing."""
+    from lib import sched as sched_mod
+    parts = [p.strip() for p in spec.split("::")]
+    if len(parts) == 3:
+        name, cron, mission = parts
+    elif len(parts) == 2:
+        cron, mission = parts
+        name = slugify(mission)
+    else:
+        print("tony: --add-schedule needs 'NAME :: CRON :: MISSION' "
+              "or 'CRON :: MISSION'", file=sys.stderr)
+        return 2
+    try:
+        job = sched_mod.add(None, name, cron, mission)
+    except ValueError as e:
+        print(f"tony: --add-schedule: {e}", file=sys.stderr)
+        return 2
+    try:
+        import datetime as _dt
+        nxt = sched_mod.next_run(job["cron"], _dt.datetime.now())
+        nxt_s = nxt.strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        nxt_s = "never (impossible cron)"
+    print(f"tony: scheduled '{job['name']}' ({job['cron']}) -> next {nxt_s}")
+    return 0
+
+
+def cmd_list_schedule(_args) -> int:
+    from lib import sched as sched_mod
+    jobs = sched_mod.load(None)
+    if not jobs:
+        print("tony: no schedules (~/.tony/schedule.json)")
+        return 0
+    for j in jobs:
+        print(f"{j.get('name')}  [{j.get('cron')}]  {j.get('mission', '')[:80]}")
+    return 0
+
+
+def cmd_rm_schedule(name: str) -> int:
+    from lib import sched as sched_mod
+    if sched_mod.remove(None, name):
+        print(f"tony: schedule '{name}' removed")
+        return 0
+    print(f"tony: no schedule '{name}'", file=sys.stderr)
+    return 2
+
+
 def cmd_daemon(inbox: str | None, interval: int = 10, once: bool = False,
                parallel: bool = False, max_verify: int = 3,
                keep_going: bool = False, timeout: int = 600) -> int:
@@ -511,6 +560,9 @@ def main(argv=None) -> int:
     p.add_argument("--daemon", action="store_true", help="resident inbox loop on ~/.tony/inbox (Ctrl-C to stop)")
     p.add_argument("--daemon-once", action="store_true", help="run a single inbox mission then exit")
     p.add_argument("--inbox", metavar="PATH", default=None, help="inbox dir for --daemon (default ~/.tony/inbox)")
+    p.add_argument("--add-schedule", metavar="SPEC", default=None, help="add cron schedule: 'NAME :: CRON :: MISSION' (or 'CRON :: MISSION')")
+    p.add_argument("--list-schedule", action="store_true", help="list cron schedules from ~/.tony/schedule.json")
+    p.add_argument("--rm-schedule", metavar="NAME", default=None, help="remove cron schedule by name")
     p.add_argument("--interval", metavar="N", type=int, default=10, help="daemon poll interval in seconds (default 10)")
     p.add_argument("--timeout", metavar="N", type=int, default=600, help="role-call timeout in seconds (default 600)")
     p.add_argument("--set-role", metavar="ROLE=PATTERN", default=None, help="pin role to a live-model regex pattern")
@@ -568,6 +620,12 @@ def main(argv=None) -> int:
         return cmd_daemon(args.inbox, interval=args.interval, once=args.daemon_once,
                           parallel=args.parallel, max_verify=args.max_verify,
                           keep_going=args.keep_going, timeout=args.timeout)
+    if args.add_schedule:
+        return cmd_add_schedule(args.add_schedule)
+    if args.list_schedule:
+        return cmd_list_schedule(args)
+    if args.rm_schedule:
+        return cmd_rm_schedule(args.rm_schedule)
     if args.install_daemon:
         from lib import packaging
         res = packaging.install()

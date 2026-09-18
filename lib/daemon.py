@@ -63,16 +63,65 @@ def claim(path: str) -> str:
     return dest
 
 
+def reap_stale_claims(inbox: str, ttl_minutes: int = 30, now: float | None = None) -> int:
+    """Un-claim .claimed files whose mtime is older than the TTL.
+
+    A killed daemon leaves .claimed files that list_pending never shows —
+    without a reaper those missions are invisible forever. Mtime older than
+    ttl_minutes -> rename back to the pending name. Returns reaped count.
+    Fresh claims (live daemon holding them) are never touched.
+    """
+    if now is None:
+        now = time.time()
+    reaped = 0
+    try:
+        names = sorted(os.listdir(inbox))
+    except OSError:
+        return 0
+    for n in names:
+        if not n.endswith(CLAIMED_SUFFIX):
+            continue
+        cpath = os.path.join(inbox, n)
+        try:
+            age_min = (now - os.path.getmtime(cpath)) / 60
+        except OSError:
+            continue
+        if age_min <= ttl_minutes:
+            continue
+        orig = cpath[: -len(CLAIMED_SUFFIX)]
+        if os.path.exists(orig):
+            continue  # never clobber a live pending file
+        try:
+            os.rename(cpath, orig)
+            reaped += 1
+        except OSError:
+            pass
+    return reaped
+
+
 def _stem(path: str) -> str:
     base = os.path.basename(path)
     return base[:-3] if base.endswith(".md") else base
 
 
 def run_once(inbox: str, mission_fn, home: str | None = None) -> dict | None:
-    """Execute the oldest pending mission. Empty inbox -> None (noop)."""
+    """Execute the oldest pending mission. Empty inbox -> None (noop).
+
+    Each pass first reaps stale claims (killed-daemon orphans older than the
+    TTL become visible again), then serves inbox missions, then due cron
+    schedules (ledger-guarded, missed windows skipped, never backfilled).
+    """
+    try:
+        reap_stale_claims(inbox)
+    except Exception:
+        pass
     pending = list_pending(inbox)
     if not pending:
-        return None
+        from lib import sched as _sched
+        try:
+            return _sched.run_due(home, mission_fn)
+        except Exception:
+            return None
     src = pending[0]
     stem = _stem(src)
     claimed = claim(src)

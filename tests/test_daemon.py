@@ -89,8 +89,7 @@ def test_loop_keyboard_interrupt_exits():
     shutil.rmtree(home, ignore_errors=True)
 
 
-def test_read_fail_releases_claim():
-    # read-fail must un-claim: claimed files are invisible to list_pending,
+def test_read_fail_releases_claim():    # read-fail must un-claim: claimed files are invisible to list_pending,
     # so leaving them claimed would wedge the mission forever.
     import shutil
     home = _home()
@@ -107,3 +106,55 @@ def test_read_fail_releases_claim():
     finally:
         os.chmod(p, 0o600)
         shutil.rmtree(home, ignore_errors=True)
+
+
+def test_reap_stale_claim_unclaims():
+    # Killed-daemon orphan: .claimed older than the TTL becomes pending again.
+    import shutil
+    import time
+    home = _home()
+    inbox = daemon.inbox_dir(home)
+    os.makedirs(inbox, exist_ok=True)
+    p = os.path.join(inbox, "orphan.md")
+    with open(p, "w") as f:
+        f.write("orphaned mission")
+    claimed = daemon.claim(p)
+    assert daemon.list_pending(inbox) == []
+    old = time.time() - 3600  # 60 min old, TTL is 30
+    os.utime(claimed, (old, old))
+    assert daemon.reap_stale_claims(inbox) == 1
+    assert daemon.list_pending(inbox) == [p], daemon.list_pending(inbox)
+    shutil.rmtree(home, ignore_errors=True)
+
+
+def test_reap_fresh_claim_untouched():
+    # Live daemon's claim (fresh mtime) is never reaped.
+    import shutil
+    home = _home()
+    inbox = daemon.inbox_dir(home)
+    os.makedirs(inbox, exist_ok=True)
+    p = os.path.join(inbox, "live.md")
+    with open(p, "w") as f:
+        f.write("live mission")
+    daemon.claim(p)
+    assert daemon.reap_stale_claims(inbox) == 0
+    assert daemon.list_pending(inbox) == []
+    shutil.rmtree(home, ignore_errors=True)
+
+
+def test_run_once_fires_due_schedule():
+    # Empty inbox + due cron -> scheduled mission runs via mission_fn once
+    # per minute (ledger-guarded); second pass in the same minute is a noop.
+    import shutil
+    from lib import sched as sched_mod
+    home = _home()
+    inbox = daemon.inbox_dir(home)
+    os.makedirs(inbox, exist_ok=True)
+    sched_mod.add(home, "tick", "* * * * *", "scheduled tick")
+    calls = []
+    res = daemon.run_once(inbox, lambda t, n: calls.append((t, n)) or "TICK", home=home)
+    assert res is not None and res["status"] == "ok", res
+    assert res["name"] == "sched-tick", res
+    assert calls == [("scheduled tick", "sched-tick")], calls
+    assert daemon.run_once(inbox, lambda t, n: "never", home=home) is None
+    shutil.rmtree(home, ignore_errors=True)
