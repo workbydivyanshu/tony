@@ -6,12 +6,13 @@ Stdlib only. Never talks raw HTTP to model gateways (P3+ rides `opencode run`).
 import argparse
 import json
 import os
+import re
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import boulder, catalog, roles, tiers, watch  # noqa: E402
+from lib import boulder, catalog, config, roles, tiers, watch  # noqa: E402
 
 VERSION = "0.1.0-p1"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
@@ -29,14 +30,56 @@ def open_boulders() -> list:
 
 def cmd_models(_args) -> int:
     models = catalog.live_catalog()
-    roles = tiers.assign_roles(models)
+    raw = tiers.assign_roles_with_sources(models, config.get_roles() or None)
     print(f"tony {VERSION} — live opencode catalog ({len(models)} models):")
     for m in models:
         print(f"  {m}")
     print("\nrole assignments:")
-    for role, model in roles.items():
-        print(f"  {role:12s} -> {model}")
+    for role, val in raw.items():
+        if isinstance(val, dict):
+            mark = " [override]" if val["source"] == "override" else ""
+            print(f"  {role:12s} -> {val['model']}{mark}")
+        else:
+            print(f"  {role:12s} -> {val}")
     return 0
+
+
+def cmd_set_role(spec: str) -> int:
+    """--set-role ROLE=PATTERN: validate first, write only on success."""
+    if "=" not in spec:
+        print("tony: --set-role needs ROLE=PATTERN", file=sys.stderr)
+        return 2
+    role, pattern = spec.split("=", 1)
+    try:
+        config.set_role(role, pattern)
+    except (KeyError, re.error) as e:
+        print(f"tony: --set-role: {e}", file=sys.stderr)
+        return 2
+    print(f"tony: role '{role}' -> pattern '{pattern}'")
+    return 0
+
+
+def cmd_clear_role(role: str) -> int:
+    config.clear_role(role)
+    print(f"tony: role '{role}' override cleared")
+    return 0
+
+
+def cmd_show_config(_args) -> int:
+    models = catalog.live_catalog()
+    raw = tiers.assign_roles_with_sources(models, config.get_roles() or None)
+    for role, val in raw.items():
+        if isinstance(val, dict):
+            print(f"  {role:12s} -> {val['model']} ({val['source']})")
+        else:
+            print(f"  {role:12s} -> {val} (tier-default)")
+    return 0
+
+
+def cmd_auto_config(_args) -> int:
+    config.clear_roles()
+    print("tony: overrides cleared; reseated from live catalog")
+    return cmd_show_config(_args)
 
 
 def cmd_status(_args) -> int:
@@ -77,8 +120,11 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
     from lib import engine as eng
     from lib import report as rep
+    from lib import config
     models = catalog.live_catalog()
-    assignments = tiers.assign_roles(models)
+    overrides = config.get_roles() or None
+    raw = tiers.assign_roles_with_sources(models, overrides)
+    assignments = {r: (v["model"] if isinstance(v, dict) else v) for r, v in raw.items()}
     slug = slugify(mission)
     workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", slug)
     print(f"tony: mission '{mission[:80]}' -> slug {slug}")
@@ -139,6 +185,7 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
     crash-safe rule). Critic is not re-run; the wave is the gate."""
     from lib import engine as eng
     from lib import report as rep
+    from lib import config
     p = boulder.path_for(slug)
     try:
         b = boulder.load(p)
@@ -149,7 +196,9 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
         print(f"tony: boulder '{slug}' is empty, nothing to resume")
         return 2
     models = catalog.live_catalog()
-    assignments = tiers.assign_roles(models)
+    overrides = config.get_roles() or None
+    raw = tiers.assign_roles_with_sources(models, overrides)
+    assignments = {r: (v["model"] if isinstance(v, dict) else v) for r, v in raw.items()}
     workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", slug)
     boulder.log(b, f"resume: {sum(1 for t in b['todos'] if t['box'])}/{len(b['todos'])} TODOs already done")
     tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
@@ -239,6 +288,7 @@ def cmd_watch(slug: str, interval: int = 2, once: bool = False, timeout: int = 0
         return 130
 
 
+
 def main(argv=None) -> int:
     argv = argv or sys.argv[1:]
     p = argparse.ArgumentParser(prog="tony", description="free-model-native agent CLI")
@@ -251,13 +301,16 @@ def main(argv=None) -> int:
     p.add_argument("--resume", metavar="SLUG", default=None, help="resume boulder <slug>: run unchecked TODOs + wave, no second architect call")
     p.add_argument("--keep-going", action="store_true", help="run the wave even with [BLOCKED] TODOs (default: wave skipped when blocked)")
     p.add_argument("--watch", metavar="SLUG", default=None, help="poll <slug> boulder progress")
+    p.add_argument("--set-role", metavar="ROLE=PATTERN", default=None, help="pin role to a live-model regex pattern")
+    p.add_argument("--clear-role", metavar="ROLE", default=None, help="drop a role override")
+    p.add_argument("--show-config", action="store_true", help="print effective role->model map with sources")
+    p.add_argument("--auto-config", action="store_true", help="clear overrides, reseat from live catalog")
     p.add_argument("mission", nargs="?", default=None, help="one-shot mission text")
     args, _ = p.parse_known_args(argv)
     if args.version:
         print(f"tony {VERSION}")
         return 0
     if args.watch:
-        # Find --watch in argv and parse everything after it with watch subparser
         watch_idx = argv.index("--watch")
         rest = argv[watch_idx + 1:]
         wp = argparse.ArgumentParser(prog="tony watch")
@@ -276,6 +329,14 @@ def main(argv=None) -> int:
         wp.add_argument("--timeout", type=int, default=0, help="exit after S seconds (0=never)")
         wargs = wp.parse_args(argv[wi + 1:])
         return cmd_watch(wargs.slug, interval=wargs.interval, once=wargs.once, timeout=wargs.timeout)
+    if args.set_role:
+        return cmd_set_role(args.set_role)
+    if args.clear_role:
+        return cmd_clear_role(args.clear_role)
+    if args.show_config:
+        return cmd_show_config(args)
+    if args.auto_config:
+        return cmd_auto_config(args)
     if args.resume:
         return cmd_resume(args.resume, parallel=args.parallel, max_verify=args.max_verify,
                           keep_going=args.keep_going)
