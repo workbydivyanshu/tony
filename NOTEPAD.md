@@ -45,9 +45,28 @@ Criteria:
 Steps: test_boulder.py RED -> boulder.py GREEN -> roles.py architect template -> CLI --dry-run GREEN -> commit.
 ## Now
 test_boulder.py RED capture
+## 03:5x — P2 GREEN, COMMITTED 71e91c8
+- RED: ImportError boulder (pre-lib) captured
+- GREEN: 5/5 (3 P1 + 2 boulder round-trip/new-log)
+- C1 boulder round-trip incl. box-flip + re-parse: PASS
+- C2 --dry-run fizzbuzz -> ~/.tony/boulders/fizzbuzz.md (title+TODO+wave+log): PASS
+- C3 zero execution (no runs.log): PASS
+## Now
+P2 done. Awaiting user: P3 (engine + role calls) or stop.
+## P3 plan (appended)
+Tier: HEAVY (new external integration: subprocess opencode; per directive). No plan file -> self-review, no reviewer loop.
+Goal: lib/engine.py (role_call via `opencode run`, demote+retry, boulder flip/log, runs.log) + tony "MISSION" one-shot (architect plan -> execute -> wave basic).
+Criteria:
+- C1: role_call runs subprocess, captures output+duration, writes delegate file — verify by test w/ fake runner
+- C2: engine loop flips boxes + logs + demotes once on failure then BLOCKED — verify by test
+- C3: runs.log row per call (ts, role, model, status, duration) — verify by test
+- C4 E2E: tony "reply with TONY ONLINE" works, free model only — verify live (scripture F1)
+Steps: test_engine.py RED -> engine.py GREEN -> CLI mission wired -> live C4 -> commit.
+## Now
+test_engine.py RED capture
 ## Todo
-- test_boulder.py RED
-- lib/boulder.py GREEN
-- lib/roles.py architect template
-- tony --dry-run wired + live verify C1/C2/C3
+- test_engine RED
+- lib/engine.py GREEN
+- tony MISSION one-shot wired
+- live C4 (F1) + log + boulder wave check
 - commit + notepad

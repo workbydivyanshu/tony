@@ -71,12 +71,45 @@ def cmd_dryrun(mission: str) -> int:
     return 0
 
 
+def cmd_mission(mission: str) -> int:
+    """One-shot: architect plan via heavy model -> boulder -> execute -> report.
+
+    v0.1 scope: the architect call IS an opencode run; the plan markdown it
+    returns is parsed into TODOs + wave. Full loop in run_loop.
+    """
+    from lib import engine as eng
+    models = catalog.live_catalog()
+    assignments = tiers.assign_roles(models)
+    slug = slugify(mission)
+    workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", slug)
+    print(f"tony: mission '{mission[:80]}' -> slug {slug}")
+    print(f"tony: architect = {assignments['architect']}")
+    arch = eng.role_call("architect", assignments["architect"],
+                         roles.architect_prompt(mission), workdir)
+    print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
+    if arch["status"] != "ok":
+        print("tony: architect failed; boulder unwritten")
+        return 1
+    b = boulder.parse(arch["output"]) if "# Boulder" in arch["output"] else boulder.new(slug)
+    if not b["todos"]:
+        # architect returned prose: keep it as one TODO so the loop still runs
+        boulder.add_todo(b, arch["output"][:400])
+    boulder.log(b, f"mission started: {mission[:120]}")
+    tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
+    eng.run_loop(b, tier_models, workdir)
+    p = boulder.save(slug, b)
+    done = sum(1 for t in b["todos"] if t["box"])
+    print(f"tony: boulder {p} — {done}/{len(b['todos'])} TODOs done")
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="tony", description="free-model-native agent CLI")
     p.add_argument("--version", action="store_true")
     p.add_argument("--models", action="store_true", help="print live catalog + role assignments")
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + boulders")
     p.add_argument("--dry-run", metavar="MISSION", default=None, help="plan only, write boulder, execute nothing")
+    p.add_argument("mission", nargs="?", default=None, help="one-shot mission text")
     args = p.parse_args(argv)
     if args.version:
         print(f"tony {VERSION}")
@@ -85,6 +118,8 @@ def main(argv=None) -> int:
         return cmd_status(args)
     if args.dry_run:
         return cmd_dryrun(args.dry_run)
+    if args.mission:
+        return cmd_mission(args.mission)
     return cmd_models(args)
 
 
