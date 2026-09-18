@@ -348,3 +348,39 @@ Criteria:
 - C3: suite all green + keyless clean + zero hardcoded IDs
 - C4 SURFACE: one live exchange on fast-tier free model (prove conversational reply, not inference)
 Teardown: tests fake everything; live proof session file kept as evidence (tiny); no procs left.
+
+## P9 GREEN + SURFACE (2026-09-18, VISION)
+- RED captured: lib.chat unknown import (LSP; other-file noise = stale cache per precedent).
+- Test fix (mine): test_repl_control asserted raw line, but call_fn correctly receives the BUILT prompt — assertion fixed to match on "user: hi" inside the prompt.
+- GREEN: suite 143/143 (141 prior untouched + 2 new test_chat). C1 history round-trip + prompt (history+memory); C2 REPL control (blanks skipped, /quit+EOF clean, history saved); prompt_builder seam for fresh-memory-per-turn.
+- SURFACE LIVE (foreground, piped stdin — backgrounded pipes die at tool-call return; pgrep polls self-matched their own command string, lesson logged): `tony --chat p9proof` on lightning-free → "reply with CHAT ONLINE" → model replied "CHAT ONLINE", history file holds both exchanges. C4 PASS, zero stray procs.
+- Process lessons: (1) pgrep -f self-matches when the pattern is in the polling command — verify with pgrep -af + grep -v. (2) Background+pipe launches don't survive tool-call return even under setsid — foreground with generous timeout for live proofs.
+- Committed (see log above).
+
+## P10 (v0.3 daemon — Hermes-replacement step 3) — plan (2026-09-18)
+Tier: LIGHT (inbox poll + claim + loop, mission_fn seam; no plan file -> self-review).
+Goal: resident loop: ~/.tony/inbox/*.md -> claim (atomic rename) -> mission_fn -> inbox-done/<stem>.done.md. Live CLI wires mission_fn to cmd_mission (headless, yes=True).
+Criteria:
+- C1: list_pending skips claimed/done/hidden; claim is atomic rename — test
+- C2: run_once executes oldest, writes done-report, removes claimed; empty -> None — test
+- C3: loop stop_after + KeyboardInterrupt exits — test
+- C4: suite all green + keyless clean + live --help/--models
+- C5 SURFACE: live --daemon-once end-to-end on free models (F2-style file mission)
+Teardown: tests temp-HOME only; live proof residue logged; no procs left.
+PROCESS LESSON (re-learned): foreground live missions in a tool call die at the tool timeout (took the whole mission down at 10:00 with zero output; P6 setsid rule re-proven). Long missions: setsid + log file + short polls, no sleep inside the launch call.
+
+## 18:3x — P10 GREEN, COMMITTED 79a96b2
+- RED captured: lib.daemon unknown import (+ stale-cache noise on old files, ignored per precedent).
+- GREEN: 149/149 (143 prior untouched + 6 new test_daemon: list/claim, run-once, empty-noop, loop-once, kbd-interrupt, read-fail-release).
+- Self-review finds (fixed pre-commit): read-fail left claimed file invisible+wedged -> un-claim on read-fail (+pin test); docstring title-line inaccuracy; one whitespace-merge syntax break (my own bad no-op edit, fixed immediately).
+- C5 SURFACE LIVE: --daemon-once on /tmp/tony-daemon-inbox (F2-style hello mission): architect + 3 builders + critic ISSUES (thin proof, correctly adversarial) + 181s fix builder -> 3/3 TODOs + 2/2 wave, MISSION SCORE 80/100, done-file daemonproof.done.md (ok), claimed removed, daemon exited 0. First foreground attempt died at the 10-min tool timeout (zero output, delegates' work survived) — re-ran via setsid+log+poll per P6 rule.
+- Lane: keyless clean, zero hardcoded IDs, --models 7 live, --help shows --daemon/--daemon-once/--inbox/--interval.
+- Residue cleared: /tmp/tony-daemon-inbox, ~/tony-e2e-daemon. Ledger kept: boulder + fleet report + runs.log + inbox-done/daemonproof.done.md.
+
+## P12 — skills loader (2026-09-18 ~21:10)
+- Plan: ~/.tony/skills/*.md discovery + keyword match (hyphen-split) + architect injection + --skills list. Cline SKILL.md shape. RED true (my earlier fake-red lesson: bare python3 on a test file defines fns, runs nothing — always use the plain-assert runner).
+- GREEN: suite 154/154 (149 prior + 5 test_skills). Fix during: match() splits hyphenated name tokens.
+- CLI: --skills lists; _matched_skills() feeds architect_prompt(mission, mcp, mem, skills) in cmd_mission. Dry-run unchanged (no architect call by design). Chat injection deferred.
+- LIVE PROOF (free models, 80/100): skill 'skillproof doctrine' (title must contain SKILLPROOF) -> architect boulder title '# Boulder: SKILLPROOF-verification', 4 doctrine hits in 01-architect.md. 3/3 TODOs + 2/2 wave, report -> ~/.fleet/out/tony-reply-with-skillproof.md. Slow lane: one builder 344s.
+- Teardown: probe skill kept (real skill, tiny); mission artifacts = evidence; no procs (pgrep self-match re-confirmed).
+

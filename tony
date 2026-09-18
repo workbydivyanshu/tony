@@ -192,6 +192,11 @@ def cmd_dryrun(mission: str) -> int:
     return 0
 
 
+def _matched_skills(mission: str) -> list:
+    from lib import skills as skills_mod
+    return skills_mod.match(mission, skills_mod.discover())
+
+
 def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
                 keep_going: bool = False, timeout: int = 600, yes: bool = False) -> int:
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
@@ -208,7 +213,8 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     print(f"tony: architect = {assignments['architect']}")
     arch = eng.role_call("architect", assignments["architect"],
                          roles.architect_prompt(mission, mcp.names(),
-                                                mem_mod.recall(limit=20)), workdir,
+                                                mem_mod.recall(limit=20),
+                                                matched_skills=_matched_skills(mission)), workdir,
                          timeout=timeout)
     print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
     if arch["status"] != "ok":
@@ -402,6 +408,7 @@ def main(argv=None) -> int:
     p.add_argument("--models", action="store_true", help="print live catalog + role assignments")
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + mcp + boulders")
     p.add_argument("--mcp-status", action="store_true", help="list MCP servers delegates inherit via opencode")
+    p.add_argument("--skills", action="store_true", help="list discovered skills from ~/.tony/skills")
     p.add_argument("--remember", metavar="FACT", default=None, help="append one dated fact to ~/.tony/memory/MEMORY.md")
     p.add_argument("--recall", metavar="QUERY", nargs="?", const="", default=None, help="print memory lines matching QUERY (or all when bare)")
     p.add_argument("--forget", metavar="SUBSTR", default=None, help="remove memory lines containing SUBSTR")
@@ -475,6 +482,14 @@ def main(argv=None) -> int:
         return cmd_daemon(args.inbox, interval=args.interval, once=args.daemon_once,
                           parallel=args.parallel, max_verify=args.max_verify,
                           keep_going=args.keep_going, timeout=args.timeout)
+    if args.skills:
+        from lib import skills as skills_mod
+        found = skills_mod.discover()
+        if not found:
+            print("no skills in ~/.tony/skills (drop *.md files there)")
+        for s in found:
+            print(f"{s['name']}  ({s['path']})")
+        return 0
     if args.mcp_status:
         return cmd_mcp_status(args)
     if args.remember:

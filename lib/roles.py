@@ -58,7 +58,8 @@ def critic_prompt(boulder_markdown: str) -> str:
 
 
 def architect_prompt(mission: str, mcp_servers: list | None = None,
-                     memory_lines: list | None = None) -> str:
+                     memory_lines: list | None = None,
+                     matched_skills: list | None = None) -> str:
     base = f"{ARCHITECT_SYSTEM}\nMISSION:\n{mission}\n"
     if mcp_servers:
         base += ("\nAvailable MCP tools (via opencode, use them in TODOs where they fit): "
@@ -66,4 +67,5 @@ def architect_prompt(mission: str, mcp_servers: list | None = None,
     if memory_lines:
         base += ("\nPersistent memory (facts from prior missions, respect them):\n"
                  + "\n".join(memory_lines[-20:]) + "\n")
-    return base
+    from . import skills as skills_mod
+    return skills_mod.inject_prompt(base, matched_skills or [])
