@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import catalog, tiers  # noqa: E402
+from lib import boulder, catalog, roles, tiers  # noqa: E402
 
 VERSION = "0.1.0-p1"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
@@ -52,17 +52,39 @@ def cmd_status(_args) -> int:
     return 0
 
 
+def slugify(mission: str) -> str:
+    import re
+    slug = re.sub(r"[^a-z0-9]+", "-", mission.lower()).strip("-")[:48]
+    return slug or "mission"
+
+
+def cmd_dryrun(mission: str) -> int:
+    """Plan only: write a placeholder boulder, execute nothing."""
+    slug = slugify(mission)
+    b = boulder.new(slug)
+    boulder.log(b, f"dry-run plan for: {mission[:120]}")
+    boulder.add_todo(b, "1. <architect fills this in during P3 — dry-run writes structure only>")
+    boulder.add_wave(b, "F1. <verification command from architect>")
+    p = boulder.save(slug, b)
+    print(f"dry-run boulder: {p}")
+    print("NOTE: execution happens in P3 (opencode run role calls). Nothing was executed.")
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="tony", description="free-model-native agent CLI")
     p.add_argument("--version", action="store_true")
     p.add_argument("--models", action="store_true", help="print live catalog + role assignments")
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + boulders")
+    p.add_argument("--dry-run", metavar="MISSION", default=None, help="plan only, write boulder, execute nothing")
     args = p.parse_args(argv)
     if args.version:
         print(f"tony {VERSION}")
         return 0
     if args.status:
         return cmd_status(args)
+    if args.dry_run:
+        return cmd_dryrun(args.dry_run)
     return cmd_models(args)
 
 
