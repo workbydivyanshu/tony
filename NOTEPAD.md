@@ -262,3 +262,21 @@ Teardown: fake input_fn only; per-test tmpdirs removed; no procs.
 - BUT parallel-overlap NOT proven: boulder shows 1 mangled TODO (`- [x] # Boulder: tony-parallel-recon` + raw block truncated at `## Final V` = clean[:400] fallback). Root cause: old _ITEM regex couldn't parse architect's `- [role:X] [ ]` lines → parse()=0 todos → add_todo(clean[:400]) fallback. Single explorer call 345.9s did everything (role bleed: explorer wrote the file).
 - Fix landed as d2de2b5 (15:52, opencode): _ROLE_PREFIX in _ITEM. VISION verified: re-parse of 01-architect.md now yields 4 todos + 4 wave; suite 136/136 green WITH the fix.
 - par2 re-proof launched (~15:5x, slug in-home-divyu-tony-e2e-par2-...) against fixed parser — verdict pending.
+
+## par2 --parallel re-proof verdict (2026-09-18 15:53–16:05) — 80/100, PARALLEL PROVEN LIVE
+- 4/4 TODOs (fixed parser: all architect tags dispatched as separate role calls) + 2/2 wave PASS after 1 critic-gated fix cycle.
+- Overlap proof (runs.log): TODO 2 explorer done 15:54 (29s) + TODO 1 explorer done 15:55 (85s), both lightning-free, both started ~15:53:5x — concurrent thread dispatch, separate outfiles 02/03. P5a deferred payoff CLOSED.
+- Critic adversarial again: flagged TODO 4 existence-only proof → ISSUES → builder fix → wave green. Score 80 reflects the fix cycle (honest auto-score).
+- No strays (ps clean). Proof residue: ~/tony-e2e-par2/hello-par2.txt (12B exact), boulder + report on disk.
+
+## v0.1 release triage (2026-09-18 ~16:05, VISION)
+- Suite 136/136 green WITH d2de2b5 (executed, plain-assert runner). F1 ✓ F2 100/100 ✓ F3 --status JSON valid ✓ F4 keyless grep zero hits + zero opencode/<id> literals in lib ✓ (patterns only, by design).
+- Flags live: --models/--status/--dry-run/--parallel/--max-verify/--resume/--keep-going/--yes/--watch/--tui/--timeout/--set-role/--clear-role/--show-config/--auto-config.
+- Shipped live-proven: parallel explorers, critic gate + fix loop, plan-gate (--yes, TTY pause, headless-skip), resume/keep-going, watch/TUI, role overrides + auto-config, 429 backoff + log rotation.
+- Open (v0.2): MCP tools via opencode's own tool support; Textual TUI (curses shipped, acceptable); --slug auto absent by design (slugify).
+- VERDICT: v0.1 functionally complete. Tag when Vianca says.
+
+## v0.1 TAG (2026-09-18 ~16:2x, VISION)
+- Suite RE-EXECUTED 137/137 green (16 modules, plain-assert runner). F4 keyless grep zero hits (lib/tony/tests). --status JSON valid, 7 live models.
+- Boulder tony-v01.md: TODO 6 + F4 flipped. All 4 wave items green. Tagging v0.1 now.
+- Vianca order: finish tony first, then aubade. v0.2 scope = MCP tools via opencode + TUI polish.
