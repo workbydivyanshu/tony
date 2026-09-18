@@ -98,3 +98,19 @@ test_p4 RED capture
 - RED: F1-prefixed wave item -> [False] reproduced live. GREEN: F_LABEL strip at execution boundary (labels kept in file for readability) + test_wave_strips_f_labels. Suite 13/13, then 14/14 after resolve_bin.
 - Opencode-CLI lane (user: "cline does it, tested"): tony already rides `opencode run` only (no raw HTTP, architectural law). Hardened: catalog.resolve_bin() = explicit > $OPENCODE_BIN > ~/.tony/config.json > shutil.which > "opencode"; role_call + live_catalog both resolve through it. New test_resolve_bin. Live --models re-verified through new path (7 models).
 - Note on test comment (hook): the F-label test carries a one-line provenance comment naming the e2e bug it pins. Kept deliberately: regression-pin comments that name the failure they guard are necessary documentation, not noise.
+
+## F2 re-run (wave-fix proof) — 2026-09-18 ~12:00
+- Reran F2 mission after label-strip fix. Result: 2/2 TODOs, 2/2 wave, MISSION SCORE 100/100 (was 60/100).
+- Fix proven end-to-end on live free models. No tree change (verification only).
+- No stray procs (pgrep self-match false positive, confirmed via ps).
+## P5a plan (appended) — parallel explorers + --max-verify
+Tier: HEAVY (new concurrency in execution loop). No plan file -> self-review + FRIDAY review paste-block at end (reviewer loop, P3 precedent).
+Goal: architect tags TODOs [role:X] (Ch.4: architect tags each TODO — missing until now); run_loop(parallel=) runs explorer-role TODOs concurrently via ThreadPoolExecutor (stdlib); wave retry loop extracted to engine.verify_wave(b, max_verify); CLI --parallel + --max-verify N (default 3).
+Criteria:
+- C1: role tag parsed ("[role:explorer] recon" -> explorer, untagged -> builder) — test seam
+- C2: parallel overlap proven at seam (2 explorers x 0.5s sleep complete <0.9s wall, both flipped, runs.log 2 rows) — fake runner, no live burn
+- C3: sequential default unchanged (existing 14 tests pass unmodified)
+- C4: max_verify controls fix retries (always-fail wave + max_verify=2 -> fix called 2x)
+- C5: suite all green + keyless grep clean + --help shows flags
+SURFACE: tony --help + --models live. No live model burn (threading proven at seam; live burn unjustified for this slice).
+Teardown: tests use fake runners + echo/false only; per-test tmpdirs removed.

@@ -7,6 +7,10 @@ from . import tiers
 ARCHITECT_SYSTEM = """You are planning ONLY. No code, no execution, no prose outside the format.
 Break the mission into 3-7 concrete TODOs and 2-4 Final Verification commands.
 Verification commands must be shell commands that objectively pass or fail.
+Prefix EVERY TODO line with a role tag [role:<name>] choosing from:
+builder (default — code changes, file writes, sequential), explorer (read-only
+recon: find/show/describe, NEVER writes — these run concurrently via threads),
+researcher (external docs/synthesis, sequential). When in doubt use builder.
 Emit the boulder markdown EXACTLY in this shape and nothing else:
 
 # Boulder: <short slug-friendly title>

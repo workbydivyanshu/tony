@@ -71,7 +71,7 @@ def cmd_dryrun(mission: str) -> int:
     return 0
 
 
-def cmd_mission(mission: str) -> int:
+def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3) -> int:
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
     from lib import engine as eng
     from lib import report as rep
@@ -93,23 +93,21 @@ def cmd_mission(mission: str) -> int:
         boulder.add_todo(b, clean[:400])
     boulder.log(b, f"mission started: {mission[:120]}")
     tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
-    eng.run_loop(b, tier_models, workdir)
+    eng.run_loop(b, tier_models, workdir, parallel=parallel)
     if len(b["todos"]) >= 3:
         crit_prompt = ("You are the critic. Plan + outputs follow. Find what is wrong, "
                        "missing, or unverified. Output PASS or ISSUES: <list>.\n\n" +
                        boulder.render(b))
         crit = eng.role_call("critic", assignments["critic"], crit_prompt, workdir)
         boulder.log(b, f"critic ({assignments['critic']}): {crit['output'][:300]}")
-    for attempt in range(1, 4):
-        results = eng.run_wave(b)
-        if all(results):
-            break
-        boulder.log(b, f"wave attempt {attempt} failed; feeding to builder")
-        fails = [w["text"] for w, ok in zip(b["wave"], results) if not ok]
+
+    def _builder_fix(fails):
         fix = eng.role_call("builder", assignments["builder"],
                             "Fix these failing verification steps, then stop:\n" +
                             "\n".join(fails), workdir)
-        boulder.log(b, f"builder fix attempt {attempt}: {fix['status']}")
+        boulder.log(b, f"builder fix: {fix['status']}")
+
+    eng.verify_wave(b, max_verify=max_verify, fix_fn=_builder_fix)
     p = boulder.save(slug, b)
     done = sum(1 for t in b["todos"] if t["box"])
     waved = sum(1 for w in b["wave"] if w["box"])
@@ -128,6 +126,8 @@ def main(argv=None) -> int:
     p.add_argument("--models", action="store_true", help="print live catalog + role assignments")
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + boulders")
     p.add_argument("--dry-run", metavar="MISSION", default=None, help="plan only, write boulder, execute nothing")
+    p.add_argument("--parallel", action="store_true", help="run [role:explorer] TODOs concurrently via threads")
+    p.add_argument("--max-verify", metavar="N", type=int, default=3, help="wave fix-retry attempts (default 3)")
     p.add_argument("mission", nargs="?", default=None, help="one-shot mission text")
     args = p.parse_args(argv)
     if args.version:
@@ -138,7 +138,7 @@ def main(argv=None) -> int:
     if args.dry_run:
         return cmd_dryrun(args.dry_run)
     if args.mission:
-        return cmd_mission(args.mission)
+        return cmd_mission(args.mission, parallel=args.parallel, max_verify=args.max_verify)
     return cmd_models(args)
 
 
