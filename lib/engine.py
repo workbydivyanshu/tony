@@ -253,3 +253,24 @@ def critic_gate(output) -> str:
     if re.search(r"\bPASS\b", output, re.IGNORECASE):
         return "PASS"
     return "ISSUES"
+
+
+def apply_critic_gate(b: dict, gate: str, keep_going: bool = False,
+                      fix_fn=None, critic_output: str = "") -> str:
+    """Critic-gate decision after a critic call. Returns gate.
+
+    PASS -> verdict logged, no fix. ISSUES -> hold logged + one bounded
+    fix_fn([critic_output]) call. ISSUES + keep_going -> override logged,
+    no fix. fix_fn=None never called (honest hold). fix_fn arrives as a
+    parameter, so the call-before-def ordering crash is structurally
+    impossible for callers."""
+    from . import boulder as bmod
+    bmod.log(b, f"critic gate: {gate}")
+    if gate == "ISSUES":
+        if keep_going:
+            bmod.log(b, "critic gate: ISSUES hold overridden by --keep-going")
+        else:
+            bmod.log(b, "critic gate: ISSUES; holding wave for builder fix")
+            if fix_fn is not None:
+                fix_fn([critic_output])
+    return gate

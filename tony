@@ -156,14 +156,8 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
                        boulder.render(b))
         crit = eng.role_call("critic", assignments["critic"], crit_prompt, workdir)
         boulder.log(b, f"critic ({assignments['critic']}): {crit['output'][:300]}")
-        gate = eng.critic_gate(crit["output"])
-        boulder.log(b, f"critic gate: {gate}")
-        if gate == "ISSUES":
-            if keep_going:
-                boulder.log(b, "critic gate: ISSUES hold overridden by --keep-going")
-            else:
-                boulder.log(b, "critic gate: ISSUES; holding wave for builder fix")
-                _builder_fix([crit["output"]])
+        gate = eng.apply_critic_gate(b, eng.critic_gate(crit["output"]), keep_going,
+                                     fix_fn=_builder_fix, critic_output=crit["output"])
 
     eng.verify_wave(b, max_verify=max_verify, fix_fn=_builder_fix) if eng.should_run_wave(b, keep_going) else boulder.log(b, "wave skipped (BLOCKED TODOs; use --keep-going to run anyway)")
     p = boulder.save(slug, b)

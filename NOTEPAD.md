@@ -205,3 +205,7 @@ P5d done. Tree at P5d landing commit.
 - GREEN: moved def above gate block (mirrors resume); AST order-check both functions OK; suite 50/50; F2 re-run 2/2 TODOs + 2/2 wave (cat + test -f) 100/100, file HELLO FROM TONY exact.
 - Honest gap: re-run had 2 TODOs (critic skipped), so the ISSUES+fix call path itself was proven by AST-order + suite, not re-triggered live.
 - Residue cleared (~/tony-e2e, boulders, workdirs, fleet reports); runs.log kept as ledger.
+
+## Gate-path regression pin (2026-09-18, closes F2 honest gap)
+- Extracted apply_critic_gate(b, gate, keep_going, fix_fn, critic_output) into engine.py; cmd_mission calls it with fix_fn as parameter — call-before-def crash structurally impossible.
+- tests/test_gate.py: 4 pins (PASS clean / ISSUES fix-once+hold / keep-going override / None-fix honest hold). Suite 54/54.
