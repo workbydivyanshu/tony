@@ -418,6 +418,9 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - GREEN: 186/186 (182 + 4 test_p17). Keyless clean. Live: --fast --models shows 8 models (catalog churn: jev-1.13-free joined; patterns self-healed, no code change).
 - Teardown: nothing spawned; no procs.
 
+## v0.3 TAG (2026-09-19)
+- 10 commits v0.2..v0.3 (P6-P17). Suite 186/186 re-executed on committed tree. F4 keyless 0 (literals only in test fixtures). --status JSON valid, 8 live models. Daemon active on current tree. Boulder + fleet memory updated. Tag v0.3 -> 7c344dd.
+
 
 
 
