@@ -15,12 +15,17 @@ ANGLES = (
 
 
 def explorer_prompts(topic: str) -> list:
-    """Three distinct explorer prompts (websearch MCP). Parallel-safe."""
+    """Three distinct explorer prompts. COST RULE (P16 probe: trivial calls
+    answer in ~10s, tool-using missions take 60-125s+): start from local
+    knowledge, use websearch MCP ONLY for facts that need the outside world
+    (releases, news, current state). Parallel-safe."""
     return [
-        (f"Research via the websearch MCP tools. Angle: {angle}.\n"
+        (f"Answer from your own knowledge first. Use the websearch MCP tools "
+         f"ONLY for facts you cannot know (recent releases, news, current "
+         f"state). Angle: {angle}.\n"
          f"Topic: {topic}\n"
-         "Return 4-6 bullet findings. EVERY bullet must end with the source URL "
-         "it came from. No bullets without a real URL.")
+         "Return 4-6 bullet findings. EVERY bullet about an outside-world "
+         "fact must end with the source URL it came from.")
         for angle in ANGLES
     ]
 

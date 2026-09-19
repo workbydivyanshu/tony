@@ -406,6 +406,13 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - Teardown: proof artifacts kept as evidence; no procs.
 
 
+## P16 — latency honesty (2026-09-19, Vianca's question: why is Tony slow?)
+- Finding (MEASURED, not guessed): trivial `opencode run` = ~10s (3 flag variants identical, all agent variants fall back to Sisyphus default); tool-using research mission = 125s on the SAME model/lane. No harness tax to strip, no queue, no 429s (ledger: zero fails). Minutes = multi-round agentic work (websearch + synthesis), by mission design.
+- Fix = mission-shape: research explorer prompts now local-first (websearch only for outside-world facts), explorers stay parallel, --fast/role-timeout budgets queued as next slice.
+- Artifacts: lib/callshape.py (timed_run + count_internal_steps) + tests/test_p16.py. Proof logs /tmp/tony-probe{1..4}.log + results.
+- Teardown: probe files in /tmp only; no repo residue; no procs left.
+
+
 
 
 ## P11 — scheduler + claim reaper (2026-09-18 ~23:15, FRIDAY)
