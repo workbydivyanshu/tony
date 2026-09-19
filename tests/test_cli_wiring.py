@@ -149,7 +149,8 @@ def test_timeout_default_600():
 
 
 def test_timeout_captured_by_fake_runner():
-    """timeout=42 passed through run_loop -> role_call -> runner kwarg."""
+    """timeout=42 passed through run_loop -> role_call -> runner kwarg,
+    scaled by the role budget (P17: builder gets 0.8 * 42 = 33)."""
     import shutil
     from lib import engine, boulder as bmod
 
@@ -171,11 +172,12 @@ def test_timeout_captured_by_fake_runner():
                     runslog=os.path.join(TMP, "runs.log"),
                     timeout=42)
     assert len(captured) >= 1, "runner should have been called"
-    assert captured[0].get("timeout") == 42, f"expected timeout=42 in runner kwarg, got {captured[0]}"
+    assert captured[0].get("timeout") == 33, f"expected builder budget 0.8*42=33, got {captured[0]}"
 
 
 def test_timeout_600_captured_when_default():
-    """Default timeout=600 flows through to runner."""
+    """Default timeout=600 flows through to runner, scaled by role budget
+    (P17: builder 0.8 * 600 = 480)."""
     import shutil
     from lib import engine, boulder as bmod
 
@@ -196,7 +198,7 @@ def test_timeout_600_captured_when_default():
                     runner=fake_runner,
                     runslog=os.path.join(TMP, "runs.log"))
     assert len(captured) >= 1
-    assert captured[0].get("timeout") == 600, f"expected timeout=600, got {captured[0]}"
+    assert captured[0].get("timeout") == 480, f"expected builder budget 0.8*600=480, got {captured[0]}"
 
 
 # ── --tui flag tests ─────────────────────────────────────────────────────

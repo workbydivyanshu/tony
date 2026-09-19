@@ -407,10 +407,16 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 
 
 ## P16 — latency honesty (2026-09-19, Vianca's question: why is Tony slow?)
-- Finding (MEASURED, not guessed): trivial `opencode run` = ~10s (3 flag variants identical, all agent variants fall back to Sisyphus default); tool-using research mission = 125s on the SAME model/lane. No harness tax to strip, no queue, no 429s (ledger: zero fails). Minutes = multi-round agentic work (websearch + synthesis), by mission design.
-- Fix = mission-shape: research explorer prompts now local-first (websearch only for outside-world facts), explorers stay parallel, --fast/role-timeout budgets queued as next slice.
-- Artifacts: lib/callshape.py (timed_run + count_internal_steps) + tests/test_p16.py. Proof logs /tmp/tony-probe{1..4}.log + results.
-- Teardown: probe files in /tmp only; no repo residue; no procs left.
+- Finding (MEASURED, not guessed): trivial `opencode run` = ~10s (3 flag variants identical, all agent variants fall back to Sisyphus default); tool-using research mission = 125s on SAME model/lane. No harness tax, no queue, no 429s (ledger zero fails). Minutes = multi-round agentic work, by mission design.
+- Fix = mission-shape: research explorer prompts now local-first (websearch only for outside-world facts), explorers stay parallel.
+- Artifacts: lib/callshape.py (timed_run + count_internal_steps) + tests/test_p16.py. Probe logs were /tmp-only, cleared at commit.
+
+## P17 — per-role timeouts + --fast (2026-09-19, full autonomy)
+- role_timeout(): architect 1.0, builder 0.8, researcher/critic 0.6, explorer 0.4, scribe 0.2 of mission timeout; _exec_one applies it to both first call and demote retry. Backoff shortened 3 attempts [5,20] -> 2 attempts [5] (free-lane stalls cost the mission, demote decides next).
+- effective_timeout(): --fast halves mission window, floor 60s; wired in main() so resume/daemon/research/chat/mission all inherit.
+- Tests updated deliberately (they pinned old behavior the review told us to change): test_engine_ops backoff counts 3->2/4->3/[5,20]->[5]; test_cli_wiring expects scaled budgets (42->33, 600->480). New: 4 test_p17 (budgets, backoff consts, exec applies 240 for explorer, effective_timeout incl floor).
+- GREEN: 186/186 (182 + 4 test_p17). Keyless clean. Live: --fast --models shows 8 models (catalog churn: jev-1.13-free joined; patterns self-healed, no code change).
+- Teardown: nothing spawned; no procs.
 
 
 

@@ -564,13 +564,17 @@ def main(argv=None) -> int:
     p.add_argument("--list-schedule", action="store_true", help="list cron schedules from ~/.tony/schedule.json")
     p.add_argument("--rm-schedule", metavar="NAME", default=None, help="remove cron schedule by name")
     p.add_argument("--interval", metavar="N", type=int, default=10, help="daemon poll interval in seconds (default 10)")
-    p.add_argument("--timeout", metavar="N", type=int, default=600, help="role-call timeout in seconds (default 600)")
+    p.add_argument("--timeout", metavar="N", type=int, default=600, help="mission timeout in seconds (default 600); per-role budgets scale from it (architect 1.0, builder 0.8, researcher/critic 0.6, explorer 0.4, scribe 0.2)")
+    p.add_argument("--fast", action="store_true", help="halve all role timeouts (mission timeout / 2): cheap missions, tighter stall caps")
     p.add_argument("--set-role", metavar="ROLE=PATTERN", default=None, help="pin role to a live-model regex pattern")
     p.add_argument("--clear-role", metavar="ROLE", default=None, help="drop a role override")
     p.add_argument("--show-config", action="store_true", help="print effective role->model map with sources")
     p.add_argument("--auto-config", action="store_true", help="clear overrides, reseat from live catalog")
     p.add_argument("mission", nargs="?", default=None, help="one-shot mission text")
     args, _ = p.parse_known_args(argv)
+    if getattr(args, "fast", False):
+        from lib import engine as _eng
+        args.timeout = _eng.effective_timeout(args.timeout, True)
     if args.version:
         print(f"tony {VERSION}")
         return 0

@@ -104,8 +104,33 @@ RUNSLOG_DEFAULT = os.path.join(os.path.expanduser("~"), ".tony", "runs.log")
 RUNSLOG_MAX_BYTES = 1_000_000
 
 RATE_LIMIT_SIGNS = ("429", "rate limit", "quota", "overloaded")
-BACKOFF_SECS = (5, 20)
-MAX_BACKOFF_ATTEMPTS = 3
+BACKOFF_SECS = (5, 10)
+MAX_BACKOFF_ATTEMPTS = 2
+
+# Per-role wall-clock budgets (P17: free-lane stalls cost the mission, not the
+# role). Values are fractions of the mission timeout: architect needs the full
+# plan window, builders get most of it, cheap roles get capped hard.
+ROLE_TIMEOUT_FRAC = {
+    "architect": 1.0,
+    "builder": 0.8,
+    "researcher": 0.6,
+    "critic": 0.6,
+    "explorer": 0.4,
+    "scribe": 0.2,
+}
+
+
+def role_timeout(role: str, mission_timeout: int) -> int:
+    """Wall-clock budget for one role call. Unknown roles get the full window."""
+    return int(mission_timeout * ROLE_TIMEOUT_FRAC.get(role, 1.0))
+
+
+def effective_timeout(base: int, fast: bool = False) -> int:
+    """Mission timeout after --fast. Halves the window, floor 60s so cheap
+    roles keep a usable budget (scribe 0.2 * 60 = 12s minimum)."""
+    if not fast:
+        return base
+    return max(60, base // 2)
 
 
 def _looks_rate_limited(output: str) -> bool:
@@ -196,7 +221,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
             return
         model = models[0]
         res = role_call(role, model, todo["text"], workdir, runner=runner,
-                        timeout=timeout, runslog=runslog, sleep_fn=sleep_fn)
+                        timeout=role_timeout(role, timeout), runslog=runslog, sleep_fn=sleep_fn)
     except Exception as e:  # makedirs/listdir/etc blew up — contain it
         try:
             b["todos"][i]["text"] += " [BLOCKED]"

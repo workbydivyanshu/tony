@@ -23,11 +23,12 @@ def _clean():
 # ── Rate-limit backoff tests ────────────────────────────────────────────
 
 def test_429_backoff_sequence():
-    """role_call sees '429' in output → backoff [5,20] then returns fail.
+    """role_call sees '429' in output → backoff [5] then returns fail.
 
-    'max 3 attempts' = initial + 2 retries.  Third failure triggers demote,
-    NOT a third backoff sleep.  This is the no-storm guarantee: backoff
-    happens once per model, demote is the next step, never backoff-again."""
+    'max 2 attempts' = initial + 1 retry (P17: free-lane stalls cost the
+    mission, not the role). Second failure triggers demote, NOT a second
+    backoff sleep. This is the no-storm guarantee: backoff happens once per
+    model, demote is the next step, never backoff-again."""
     _clean()
     sleep_calls = []
     call_n = [0]
@@ -48,10 +49,10 @@ def test_429_backoff_sequence():
     res = engine.role_call("builder", "m1", "do X", workdir=TMP,
                            runner=fake_runner, runslog=runslog,
                            sleep_fn=fake_sleep)
-    # 3 runner invocations: initial + 2 retries
-    assert call_n[0] == 3, f"expected 3 attempts, got {call_n[0]}"
-    # sleep called twice with bounded backoff [5,20]
-    assert sleep_calls == [5, 20], f"expected [5,20], got {sleep_calls}"
+    # 2 runner invocations: initial + 1 retry
+    assert call_n[0] == 2, f"expected 2 attempts, got {call_n[0]}"
+    # sleep called once with bounded backoff [5]
+    assert sleep_calls == [5], f"expected [5], got {sleep_calls}"
     # Overall status is fail (backoff exhausted → demote path)
     assert res["status"] == "fail", f"expected fail, got {res['status']}"
 
@@ -84,7 +85,7 @@ def test_rate_limit_case_insensitive_signals():
         res = engine.role_call("builder", "m1", "do X", workdir=TMP,
                                runner=fake_runner, runslog=runslog,
                                sleep_fn=fake_sleep)
-        assert calls == [5, 20], f"signal '{sig}': expected [5,20], got {calls}"
+        assert calls == [5], f"signal '{sig}': expected [5], got {calls}"
         assert res["status"] == "fail", f"signal '{sig}': expected fail"
 
 
@@ -178,10 +179,10 @@ def test_backoff_then_demote_no_storm():
                      runner=fake_runner,
                      runslog=os.path.join(TMP, "runs-storm.log"),
                      sleep_fn=fake_sleep)
-    # m1: 3 attempts + 2 sleeps, m2: 1 attempt = 4 total runner calls
-    assert call_n[0] == 4, f"expected 4 runner calls, got {call_n[0]}"
+    # m1: 2 attempts + 1 sleep, m2: 1 attempt = 3 total runner calls
+    assert call_n[0] == 3, f"expected 3 runner calls, got {call_n[0]}"
     # Sleeps only during m1 backoff, NOT after demote
-    assert sleep_calls == [5, 20], f"expected [5,20] (no storm), got {sleep_calls}"
+    assert sleep_calls == [5], f"expected [5] (no storm), got {sleep_calls}"
     # Demote succeeded
     assert b["todos"][0]["box"] is True, f"expected box True"
 
