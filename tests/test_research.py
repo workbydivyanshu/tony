@@ -29,13 +29,18 @@ def test_wave_cmds():
     import os
     d = tempfile.mkdtemp()
     rp = os.path.join(d, "r.md")
-    cmds = research.wave_cmds(rp)
+    sp = os.path.join(d, "explorers.md")
+    # real mode: every report URL must exist in the explorer corpus, >=3 URLs
+    open(sp, "w").write("a http://x.com b https://y.com c http://z.com")
+    open(rp, "w").write("a http://x.com b https://y.com c http://z.com")
+    cmds = research.wave_cmds(rp, sp)
     assert len(cmds) == 2
-    # F1: file must exist; F2: must contain >=3 http URLs -> simulate both
-    open(rp, "w").write("a http://x.com b https://y.com http://z.com")
     import subprocess
     for c in cmds:
         assert subprocess.run(c, shell=True).returncode == 0, c
-    # and F2 must fail with <3 URLs
-    open(rp, "w").write("only http://one.com")
+    # F2 fails when a cited URL is invented (not in sources)
+    open(rp, "w").write("http://x.com https://y.com https://invented.com")
+    assert subprocess.run(cmds[1], shell=True).returncode != 0
+    # and F2 fails with <3 URLs even when all are sourced
+    open(rp, "w").write("http://x.com https://y.com")
     assert subprocess.run(cmds[1], shell=True).returncode != 0

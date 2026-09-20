@@ -67,22 +67,20 @@ _URL_RX = "https?://"
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def wave_cmds(report_path: str, sources_path: str | None = None) -> list:
+def wave_cmds(report_path: str, sources_path: str) -> list:
     """F1: report exists and is non-empty.
-    F2 (P19a real mode, sources_path given): >=3 URLs AND every report URL
-    appears in the explorer corpus (membership, not URL-shape counting).
-    F2 legacy mode (no sources_path): >=3 http(s) URLs inside the report.
+    F2 (P19a/P20 real mode, required): >=3 URLs AND every report URL appears
+    in the explorer corpus (membership, not URL-shape counting). The legacy
+    count-only mode was removed in P20 — a wave that cannot verify citations
+    must fail, not fall back to a weaker check.
     """
-    f2 = (f"python3 -c \"import sys,re;t=open('{report_path}').read();"
-          "sys.exit(0 if len(re.findall(r'https?://', t))>=3 else 1)\"")
-    if sources_path:
-        f2 = ("python3 -c \"import sys,re; "
-              f"sys.path.insert(0, r'{_REPO_ROOT}'); "
-              "from lib import research as r; "
-              f"t=open(r'{report_path}').read(); "
-              f"bad=r.check_citations(r'{report_path}', r'{sources_path}'); "
-              f"n=len(re.findall(r'{_URL_RX}', t)); "
-              "sys.exit(0 if (n>=3 and not bad) else 1)\"")
+    f2 = ("python3 -c \"import sys,re; "
+          f"sys.path.insert(0, r'{_REPO_ROOT}'); "
+          "from lib import research as r; "
+          f"t=open(r'{report_path}').read(); "
+          f"bad=r.check_citations(r'{report_path}', r'{sources_path}'); "
+          f"n=len(re.findall(r'{_URL_RX}', t)); "
+          "sys.exit(0 if (n>=3 and not bad) else 1)\"")
     return [
         f"test -s {report_path}",
         f2,

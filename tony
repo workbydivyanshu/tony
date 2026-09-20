@@ -17,6 +17,7 @@ from lib import boulder, catalog, config, mcp, memory as mem_mod, roles, score a
 
 VERSION = "0.4.0-p18"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
+TONY_DIR_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 def cmd_score(b: dict, gate: str, evidence: float | None = None) -> int:
@@ -598,6 +599,61 @@ def cmd_install_defaults() -> int:
     return 0
 
 
+def selftest_checks() -> list[tuple[str, bool, str]]:
+    """Run stock self-verification checks. Returns [(name, ok, detail)].
+
+    tests: run_tests.py full suite. waveguard: hostile-command seam.
+    ruff/mypy: optional tools — SKIP when missing, never a fake PASS.
+    """
+    import subprocess
+    results: list[tuple[str, bool, str]] = []
+
+    r = subprocess.run([sys.executable, os.path.join(TONY_DIR_ROOT, "run_tests.py"),
+                        "--skip-self"],
+                       capture_output=True, text=True, cwd=TONY_DIR_ROOT, timeout=300)
+    line = (r.stdout or "").strip().splitlines()[-1] if (r.stdout or "").strip() else ""
+    ok = r.returncode == 0 and "FAIL=0" in line
+    results.append(("tests", ok, line or f"exit={r.returncode}"))
+
+    try:
+        from lib import boulder, engine
+        b = boulder.new("selftest-waveguard")
+        boulder.add_wave(b, "F1. sudo rm -rf /tmp/tony-selftest-never")
+        res = engine.run_wave(b, cwd="/tmp")
+        ok = res == [False] and any("BLOCKED by waveguard" in ln for ln in b["log"])
+        results.append(("waveguard", bool(ok), "hostile wave blocked" if ok else "NOT blocked"))
+    except Exception as e:
+        results.append(("waveguard", False, f"exception: {type(e).__name__}"))
+
+    for name, cmd in (("ruff", ["ruff", "check", "."]), ("mypy", ["mypy", "tony", "lib"])):
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, cwd=TONY_DIR_ROOT, timeout=300)
+        except FileNotFoundError:
+            results.append((name, True, "SKIP (tool absent)"))
+            continue
+        tail = (r.stdout or r.stderr or "").strip().splitlines()[-1:]
+        detail = tail[0] if tail else f"exit={r.returncode}"
+        results.append((name, r.returncode == 0, detail))
+    return results
+
+
+def selftest_exit(results: list) -> int:
+    """Print one line per check; exit 0 only when nothing failed."""
+    bad = 0
+    for name, ok, detail in results:
+        status = "PASS" if ok else "FAIL"
+        if not ok:
+            bad += 1
+        print(f"SELFTEST {status} {name}: {detail}")
+    print(f"SELFTEST {'PASS' if bad == 0 else 'FAIL'} ({len(results) - bad}/{len(results)} checks)")
+    return 0 if bad == 0 else 1
+
+
+def cmd_selftest() -> list:
+    """--selftest: verify suite + waveguard + lint/types. Returns check list."""
+    return selftest_checks()
+
+
 def main(argv=None) -> int:
     argv = argv or sys.argv[1:]
     p = argparse.ArgumentParser(prog="tony", description="free-model-native agent CLI")
@@ -609,6 +665,7 @@ def main(argv=None) -> int:
     p.add_argument("--packs", action="store_true", help="list domain packs from ~/.tony/packs")
     p.add_argument("--pack", metavar="NAME", default=None, help="print one domain pack body (referenced in missions as @pack:NAME)")
     p.add_argument("--install-defaults", action="store_true", help="seed builtin packs + morning-brief/memory-hygiene schedules (idempotent)")
+    p.add_argument("--selftest", action="store_true", help="self-verify: run stock suite + waveguard seam + ruff/mypy, print one PASS/FAIL line each")
     p.add_argument("--research", metavar="TOPIC", default=None, help="deep-research fan-out: 3 parallel explorers (websearch MCP) -> cited synthesis -> critic gate")
     p.add_argument("--install-daemon", action="store_true", help="write + enable the systemd user unit (tony --daemon at login, no sudo)")
     p.add_argument("--remember", metavar="FACT", default=None, help="append one dated fact to ~/.tony/memory/MEMORY.md")
@@ -718,6 +775,8 @@ def main(argv=None) -> int:
         return 0
     if args.install_defaults:
         return cmd_install_defaults()
+    if args.selftest:
+        return selftest_exit(cmd_selftest())
     if args.packs or args.pack:
         return cmd_packs(args.pack)
     if args.mcp_status:

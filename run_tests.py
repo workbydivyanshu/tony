@@ -16,8 +16,34 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 
 
+def _expand(args: list[str]) -> list[str]:
+    """Resolve CLI args to test paths; --skip-self drops test_selftest.py.
+
+    --skip-self exists for one reason: `tony --selftest` runs run_tests.py
+    from INSIDE the suite (via test_selftest's cmd_selftest check), which
+    teams up with other tests to recurse. The runner self-verifies its own
+    entrypoint at startup instead (see _self_check), so the suite stays a DAG.
+    """
+    paths = [a for a in args if a != "--skip-self"]
+    skip = "--skip-self" in args
+    if not paths:
+        paths = sorted(glob.glob(os.path.join(ROOT, "tests", "test_*.py")))
+    if skip:
+        paths = [p for p in paths if os.path.basename(p) != "test_selftest.py"]
+    return paths
+
+
+def _self_check() -> bool:
+    """The runner asserts on itself: --skip-self expansion must hold while
+    the plain (no-arg) expansion stays full. No suite needed."""
+    noarg = _expand([])
+    skipped = _expand(["--skip-self"])
+    return (len(noarg) > 0 and len(skipped) == len(noarg) - 1
+            and all(os.path.basename(p) != "test_selftest.py" for p in skipped))
+
+
 def main(argv: list[str]) -> int:
-    paths = argv[1:] or sorted(glob.glob(os.path.join(ROOT, "tests", "test_*.py")))
+    paths = _expand(argv[1:])
     passed = failed = 0
     failures: list[str] = []
     for path in paths:
