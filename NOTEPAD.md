@@ -577,3 +577,9 @@ PASS=1 FAIL=1
 - GREEN: 247/247 (245 prior unmodified + 2 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals.
 - SURFACE LIVE: --selftest 4/4; --doctor HEALTHY; --models live. Zero model burn; hostile strings never executed (check() args only).
 - MISSION SCORE: 90/100 (deny-list now covers the probed holes with the zero-false-positive property re-pinned; residual risk is unprobed exotic exfil, not denial).
+
+## v0.4 RELEASE (2026-09-20, autonomy — "until it's all done")
+- Scope: P18→P28 (18 commits since v0.3 tag 7c344dd): packs + @pack expansion, scheduler, daemon + loser-yields, research membership citations, critic v2 + override contract, score honesty, waveguard + red-team, sched atomicity, doctor (9 checks) + pack resolution, wave cwd, TUI/systemd/chat/skills/memory/chat-history hardening, selftest, VERSION 0.4.0-p24.
+- Audit: external explore hung in one bash call (~20 min, cancelled bg_48518f2f — third hang this week). Self-audit instead: full v0.3..HEAD lib diff reviewed hunk-by-hunk (830 ins). Every behavior change matches its NOTEPAD rationale (P19a/b/c, P22, P24–P28); new files all spec-pinned; tony CLI removals all have pinned replacements. Verdict: SHIP, zero blockers. NOTE (non-blocking, pre-existing P18): run_due on fully-missing pack expands to "" and fires an empty mission — degraded, doctor now warns; queued, not a gate.
+- Triage F1-F4: suite 247/247; keyless grep 0; --selftest 4/4; --doctor HEALTHY 9/9 exit 0; --models 7 live + role map (catalog churn 8→7, patterns self-healed); --status JSON valid; daemon active.
+- Tagging v0.4 on the ledger commit below. Push left for Vianca (never push unasked).
