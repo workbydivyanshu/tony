@@ -563,3 +563,17 @@ PASS=2 FAIL=2
 - GREEN: 245/245 (241 prior unmodified + 4 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals, diff-check clean.
 - SURFACE LIVE: --selftest 4/4; --doctor HEALTHY; --models 8 live. Zero model burn, no ~/.tony mutation (missing-pack warn proven at seam only — never forced live).
 - MISSION SCORE: 88/100 (last auditor-confirmed gap closed; parked P28: waveguard red-team probe; v0.4 tag is Vianca's call).
+
+## P28 — waveguard red-team + harden (2026-09-20, autonomy)
+- Deliberate probe (the sanctioned P28 path): 18 candidates probed as strings against check(). KEPT 9 true slips: rm -rf on dot/relative/env/tmp targets (root-only pattern required /|~|* right after space) + curl|wget piped to python3 (interpreter class was sh-only). DROPPED 4 already-blocked: rm -rf ~, rm -rf *, curl|bash, curl|sh. mv-class destructive moves unprobed, out of scope.
+- Spec delegate derailed into a repetition loop without writing the file — wrote spec direct (probed-kept discipline + benign corpus anchor per plan). No plan-agent round-trip (lane dead; queued P28 definition already scoped it).
+- RED captured:
+```
+PASS=1 FAIL=1
+  FAIL test_waveguard_redteam:test_redteam_hostile_blocked AssertionError: slip still allowed: 'rm -rf .' ()
+```
+- Full suite with spec: 245 prior green + benign anchor green.
+- T2: "recursive rm (any target)" pattern (any -r/R short-flag cluster; single-file rm -f stays allowed by construction) + piped-interpreter class extended to python/perl/ruby/php/node on both curl|wget entries.
+- GREEN: 247/247 (245 prior unmodified + 2 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals.
+- SURFACE LIVE: --selftest 4/4; --doctor HEALTHY; --models live. Zero model burn; hostile strings never executed (check() args only).
+- MISSION SCORE: 90/100 (deny-list now covers the probed holes with the zero-false-positive property re-pinned; residual risk is unprobed exotic exfil, not denial).

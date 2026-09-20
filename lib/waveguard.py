@@ -24,11 +24,15 @@ _DENY = (
     ("filesystem format", r"\bmkfs(?:\.\w+)?\b"),
     ("raw disk write", r"\bdd\b[^|;&]*\bof=/dev/|\bwrite\b.*\bof=/dev/"),
     ("fork bomb", r":\s*\(\s*\)\s*\{"),
-    ("piped remote shell", r"\b(?:curl|wget)\b[^|;&]*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b"),
-    ("remote script exec", r"\b(?:curl|wget)\b[^|;&]*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b"),
+    ("piped remote shell", r"\b(?:curl|wget)\b[^|;&]*\|\s*(?:sudo\s+)?(?:(?:ba|z|da)?sh|python[23]?|perl|ruby|php|node)\b"),
+    ("remote script exec", r"\b(?:curl|wget)\b[^|;&]*\|\s*(?:sudo\s+)?(?:(?:ba|z|da)?sh|python[23]?|perl|ruby|php|node)\b"),
     ("recursive permission sweep on root", r"\bchmod\b[^|;&]*-R[^|;&]*\s/(?:\s|$)"),
     ("recursive ownership sweep on root", r"\bchown\b[^|;&]*-R[^|;&]*\s/(?:\s|$)"),
     ("root rm", r"\brm\b[^|;&]*-[a-zA-Z]*[rf][a-zA-Z]*[^|;&]*\s(?:/|~|\*)(?:\s|$)"),
+    # P28: recursive rm on ANY target (rm -rf ./work, $HOME/x, /tmp/y all
+    # slipped the root-only pattern). Waves verify; they never prune trees.
+    # Single-file rm -f (no r/R flag) stays allowed by construction.
+    ("recursive rm (any target)", r"\brm\b[^|;&]*\s-[a-zA-Z]*[rR]"),
     ("device node write", r">\s*/dev/(?:sd|nvme|hd|vd|disk)"),
     ("initramfs/kernel image tamper", r"\b(?:dd|cp)\b[^|;&]*\b(?:/boot/|/lib/modules/)"),
     ("passwd/shadow write", r">\s*/etc/(?:passwd|shadow|sudoers)"),
