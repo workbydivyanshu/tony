@@ -461,3 +461,12 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - 15 phase-named test files renamed to functional names (git mv, zero logic); suite now reads as a feature map.
 - Free-lane live call confirmed post-hardening: `opencode run` on muse-spark → "TONY P20 LANE OK".
 - GREEN 217/217 (212+5). py_compile clean, keyless 0, ruff clean, mypy clean. Commit aaae638. MISSION SCORE: 90/100 (self-verifying + documented; remaining ceiling is live model-fired waveguard/citation missions).
+
+
+## P21 — live fire proof on free models (2026-09-20, autonomy)
+- `tony --yes --fast` F2-style mission on free lane, 15:24–15:40: artifact byte-exact on disk (grep -qxF CONTENT_MATCH), 4/4 TODOs, 3/3 wave, MISSION SCORE 80/100 with ISSUES gate honestly on record.
+- Critic proved adversarial LIVE: trailing-newline byte pedantry, unchecked waves at review time, explorer wandering — ISSUES issued with per-TODO evidence.
+- Demote-once composed twice under real lightning-free stalls, zero retry storms.
+- Model-authored waves (test -f/-s/grep pipes) all cleared waveguard — zero false positives.
+- HONEST finding queued as P22: ISSUES → builder fix FAILED → wave still ran (pre-existing yes-mode contract), log chain shows hold→fail→execute without an explicit override line. Wave-after-failed-fix must log the bypass explicitly.
+- Boulder: ~/.fleet/boulder/tony-p21-livefire.md (all green). MISSION SCORE: 88/100.
