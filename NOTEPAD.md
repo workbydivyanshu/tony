@@ -452,3 +452,12 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - P19c HONESTY: critic at >=2 TODOs (was 3); N/A gate bonus 10 → 0 (no free points; 1-TODO cap 80). Two score pins updated deliberately with rationale.
 - P19d PACKAGING: README (honest, security model first), pyproject.toml (ruff+mypy config, vendored excluded), run_tests.py stdlib runner; ruff 0 across project scope, mypy 0 in 26 files.
 - RED 14/17 → GREEN 212/212 (195+17). py_compile clean, keyless 0, --models live, daemon active. Commits ce5f994 + 7802315, correct authorship. MISSION SCORE: 85/100 (live model-fired waveguard/citation proof pending the next free scheduler window).
+
+
+## P20 — self-proof + hygiene (2026-09-20, autonomy)
+- `tony --selftest`: suite + waveguard seam + ruff + mypy printed as one PASS/FAIL line each, exit 1 on any failure; optional tools SKIP when absent (never fake PASS). Live result: SELFTEST PASS 4/4.
+- Fork-bomb-class bug found mid-build: `--selftest` ran run_tests.py from inside the suite → full recursion. Fixed with `--skip-self` + `_self_check` recursion guard on the runner.
+- Research legacy URL-count mode deleted (sources_path now required; caller + tests migrated).
+- 15 phase-named test files renamed to functional names (git mv, zero logic); suite now reads as a feature map.
+- Free-lane live call confirmed post-hardening: `opencode run` on muse-spark → "TONY P20 LANE OK".
+- GREEN 217/217 (212+5). py_compile clean, keyless 0, ruff clean, mypy clean. Commit aaae638. MISSION SCORE: 90/100 (self-verifying + documented; remaining ceiling is live model-fired waveguard/citation missions).
