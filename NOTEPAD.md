@@ -584,6 +584,24 @@ PASS=1 FAIL=1
 - Triage F1-F4: suite 247/247; keyless grep 0; --selftest 4/4; --doctor HEALTHY 9/9 exit 0; --models 7 live + role map (catalog churn 8→7, patterns self-healed); --status JSON valid; daemon active.
 - Tagging v0.4 on the ledger commit below. Push left for Vianca (never push unasked).
 
+## H1 — Kimi bridge read-only seam (2026-09-20, autonomy — Hermes-level lane 1)
+- Goal: daily read-only job (LinkedIn applied-jobs + Proton reply scan) via her real browser sessions. Decision: Kimi bridge (no re-logins, no solo WAF fights). SAFETY LAW: read-only — extract text only, never click/fill/send/mutate; no write wrappers exist by construction.
+- RED captured:
+```
+PASS=0 FAIL=1
+  FAIL test_kimi_bridge:import ModuleNotFoundError: No module named 'lib.kimi'
+```
+- Full suite with spec: 247 prior green (15 frozen pins in tests/test_kimi_bridge.py: post/status/tabs/snapshot/read/find/navigate/scan_subjects + write-absence pin).
+
+## H1 GREEN — Kimi bridge read-only seam (2026-09-20, autonomy — Hermes lane 1)
+- T2/T3 landed via delegates (T2 hung post-delivery, cancelled; file verified green on disk — standing pattern). lib/kimi.py: urllib-only post/status/tabs/snapshot/read/find/navigate/scan_subjects; zero write symbols (absence-pinned). --bridge-start explicit-only (probe-never-spawns pinned); doctor 10th check bridge (ok/warn/skip).
+- T3 ran --bridge-start once to prove it (skill-sanctioned: "start it yourself... safe to run anytime"; start serves the extension, touches no tabs/profile — NOT a violation).
+- T4 live proof (direct, foreground, read-only): daemon reachable; session tony-h1-proof opened 3 grouped tabs; python.org navigate->evaluate extracted 3024 chars (mechanism proven on live web). Target A (LinkedIn applied-jobs) + Target B (Proton inbox): BLOCKED on login walls (exact wall text captured; no creds touched, no bypass attempted). Unblock: Vianca logs into both once in Chrome; re-run proof. Evidence: ~/.fleet/out/tony-h1-proof.json. Tabs left open for her to close on ask. Zero opencode runs in proof window; zero write-action calls.
+- GREEN: 266/266 (247 prior unmodified + 19 new). ruff 0, mypy 0 (27 files), keyless 0, zero opencode/<id> literals, diff-check clean.
+- SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 10/10; --models live. Zero model burn.
+- Follow-ups (H2): route thin wrappers (navigate etc.) through post() so they actually drive; systemd unit for kimi daemon (needs her call); the live site proof re-run post-login.
+- MISSION SCORE: 88/100 (lane + lifecycle + doctor shipped, mechanism proven live; site proofs honestly BLOCKED on her logins — the boundary the safety law predicted).
+
 ## v0.4 PUSHED (2026-09-20, autonomy — Vianca: "Push v0.4" then "Public tony repo")
 - No remote existed; gh authed as workbydivyanshu. Pre-publish audit: keyless verified, .omo strays inert session JSON (no secrets), no memory/inbox/runs tracked.
 - Created https://github.com/workbydivyanshu/tony (PUBLIC), pushed master + v0.4 (both 120a227, verified via ls-remote). Older tags v0.1–v0.3 left local-only.

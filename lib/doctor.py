@@ -215,8 +215,28 @@ def _check_mcp(mcp_fn) -> Check:
             f"{len(names)} servers: {', '.join(names)}")
 
 
+def _check_bridge(bridge_path: str, run_fn) -> Check:
+    if not os.path.isfile(bridge_path):
+        return ("bridge", "skip",
+                "kimi-webbridge binary absent; "
+                "start with ~/.kimi-webbridge/bin/kimi-webbridge start")
+    try:
+        res = run_fn([bridge_path, "status"])
+        rc = res if isinstance(res, int) else getattr(res, "returncode", 0)
+    except FileNotFoundError:
+        return ("bridge", "skip",
+                "kimi-webbridge binary not found on PATH")
+    except Exception as exc:
+        return ("bridge", "warn", f"bridge probe failed: {exc}")
+    if rc == 0:
+        return ("bridge", "ok", "kimi-webbridge daemon reachable")
+    return ("bridge", "warn",
+            "kimi-webbridge daemon not running; start with "
+            "`~/.kimi-webbridge/bin/kimi-webbridge start`")
+
+
 def run_all(home=None, catalog_fn=None, mcp_fn=None,
-            run_fn=None, which_fn=None) -> list:
+            run_fn=None, which_fn=None, bridge_path=None, bridge_run_fn=None) -> list:
     """Run all checks -> [(name, status, detail)]. Never raises for
     check-level failures (each check guards its own seam); never burns
     model calls; never mutates disk."""
@@ -229,6 +249,10 @@ def run_all(home=None, catalog_fn=None, mcp_fn=None,
         run_fn = _live_run
     if which_fn is None:
         which_fn = shutil.which
+    if bridge_path is None:
+        bridge_path = os.path.expanduser("~/.kimi-webbridge/bin/kimi-webbridge")
+    if bridge_run_fn is None:
+        bridge_run_fn = run_fn
     return [
         _check_binary(which_fn),
         _check_catalog(catalog_fn),
@@ -239,4 +263,5 @@ def run_all(home=None, catalog_fn=None, mcp_fn=None,
         _check_ledger(home),
         _check_home(home),
         _check_mcp(mcp_fn),
+        _check_bridge(bridge_path, bridge_run_fn),
     ]

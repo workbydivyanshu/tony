@@ -118,8 +118,22 @@ def cmd_mcp_status(_args) -> int:
     return 0
 
 
+def cmd_bridge_start(_args) -> int:
+    """--bridge-start: explicit opt-in start of the Kimi daemon."""
+    bridge_bin = os.path.expanduser("~/.kimi-webbridge/bin/kimi-webbridge")
+    if not os.path.isfile(bridge_bin):
+        print(f"tony: bridge binary not found at {bridge_bin}")
+        return 1
+    res = subprocess.run([bridge_bin, "start"], capture_output=True, text=True)
+    print(res.stdout, end="")
+    if res.stderr:
+        print(res.stderr, end="")
+    print(f"returncode: {res.returncode}")
+    return res.returncode
+
+
 def cmd_doctor() -> int:
-    results = doctor.run_all()
+    results = doctor.run_all(bridge_path=os.path.expanduser("~/.kimi-webbridge/bin/kimi-webbridge"))
     counts = {"ok": 0, "warn": 0, "fail": 0, "skip": 0}
     for name, status, detail in results:
         counts[status] += 1
@@ -684,6 +698,7 @@ def main(argv=None) -> int:
     p.add_argument("--models", action="store_true", help="print live catalog + role assignments")
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + mcp + boulders")
     p.add_argument("--mcp-status", action="store_true", help="list MCP servers delegates inherit via opencode")
+    p.add_argument("--bridge-start", action="store_true", help="explicit opt-in start of the Kimi daemon; never implicit")
     p.add_argument("--skills", action="store_true", help="list discovered skills from ~/.tony/skills")
     p.add_argument("--packs", action="store_true", help="list domain packs from ~/.tony/packs")
     p.add_argument("--pack", metavar="NAME", default=None, help="print one domain pack body (referenced in missions as @pack:NAME)")
@@ -807,6 +822,8 @@ def main(argv=None) -> int:
         return cmd_packs(args.pack)
     if args.mcp_status:
         return cmd_mcp_status(args)
+    if args.bridge_start:
+        return cmd_bridge_start(args)
     if args.remember:
         return cmd_remember(args.remember)
     if args.recall is not None:
