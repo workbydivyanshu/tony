@@ -600,6 +600,7 @@ PASS=0 FAIL=1
 - GREEN: 266/266 (247 prior unmodified + 19 new). ruff 0, mypy 0 (27 files), keyless 0, zero opencode/<id> literals, diff-check clean.
 - SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 10/10; --models live. Zero model burn.
 - Follow-ups (H2): route thin wrappers (navigate etc.) through post() so they actually drive; systemd unit for kimi daemon (needs her call); the live site proof re-run post-login.
+- H1 PROOF UPDATE (same night, Vianca logged into Proton): Target B GREEN — inbox readable (339 unread, 308 subject lines page 1), scan_subjects over legend keywords: 0 interview/offer hits, buildbear 0. Notables: LinkedIn hibernation notice Sep 16 (independently confirms hibernation), Proton Free downgrade Sep 18. Target A stays BLOCKED (hibernating account, confirmed twice). Raw dumps deleted after counting (counts + keyword JSON only in ~/.fleet/out/tony-h1-proof.json — inbox PII minimized). Zero opencode runs, zero write calls. Suite 266/266 re-verified (no code change).
 - MISSION SCORE: 88/100 (lane + lifecycle + doctor shipped, mechanism proven live; site proofs honestly BLOCKED on her logins — the boundary the safety law predicted).
 
 ## v0.4 PUSHED (2026-09-20, autonomy — Vianca: "Push v0.4" then "Public tony repo")
