@@ -2,7 +2,7 @@
 
 Formula: 40*todo_frac + 40*wave_frac + 20*critic_bonus, rounded int.
 Caps: empty wave list caps total at 40; any TODO containing [BLOCKED] caps at 49;
-gate==ISSUES zeroes the bonus; gate==N/A grants 10 (not 20).
+gate==ISSUES zeroes the bonus; gate==N/A (no critic ran, P19c) grants 0.
 Score is always in [0,100].
 """
 
@@ -22,7 +22,8 @@ def compute(b: dict, gate: str, evidence: float | None = None) -> dict:
     if gate == "ISSUES":
         critic_bonus = 0.0
     elif gate == "N/A":
-        critic_bonus = 0.5
+        # P19c: no critic ran -> no bonus. "Not reviewed" must not free-ride.
+        critic_bonus = 0.0
     else:
         critic_bonus = 1.0
 

@@ -31,13 +31,26 @@ def path_for(session: str, home: str | None = None) -> str:
 _LINE = re.compile(r"^-\s*\[[^\]]*\]\s*(user|tony)\s*:\s*(.*)$")
 
 
+def _escape(text: str) -> str:
+    """P19b: multiline replies survive the one-line-per-exchange format."""
+    return (text or "").strip().replace("\\", "\\\\").replace("\n", "\\n")
+
+
+def _unescape(text: str) -> str:
+    # P19b: token order matters — `\\n` (escaped backslash + n) must restore
+    # as a literal backslash + n, not a newline; `\\` restores as `\`.
+    import re as _re
+    return _re.sub(r"\\\\|\\n",
+                   lambda m: "\n" if m.group(0) == "\\n" else "\\", text)
+
+
 def append(session: str, role: str, text: str, home: str | None = None) -> str:
     """Append one exchange line. Returns the file path."""
     role = "user" if role == "user" else "tony"
     p = path_for(session, home)
     stamp = time.strftime("%Y-%m-%d %H:%M")
     with open(p, "a") as f:
-        f.write(f"- [{stamp}] {role}: {(text or '').strip()}\n")
+        f.write(f"- [{stamp}] {role}: {_escape(text)}\n")
     return p
 
 
@@ -54,7 +67,7 @@ def load(session: str, home: str | None = None) -> list:
     for ln in lines:
         m = _LINE.match(ln.strip())
         if m:
-            out.append({"role": m.group(1), "text": m.group(2)})
+            out.append({"role": m.group(1), "text": _unescape(m.group(2))})
     return out
 
 

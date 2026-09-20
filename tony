@@ -243,6 +243,12 @@ def cmd_research(topic: str, timeout: int = 900) -> int:
     boulder.log(b, f"explorers ok {ok_n}/{len(prompts)}; brief -> {report_path}")
     boulder.save(slug, b)  # critic must find a real boulder on disk (P15 find)
 
+    # P19a: persist the explorer corpus so the citation wave verifies
+    # membership (report URLs ⊆ explorer URLs), not URL-shape counting.
+    sources_path = os.path.join(workdir, "explorers.md")
+    with open(sources_path, "w") as f:
+        f.write("\n\n".join(findings) + "\n")
+
     crit = eng.role_call("critic", assignments["critic"],
                          roles.critic_prompt(
                              f"BOULDER: ~/.tony/boulders/{slug}.md\n"
@@ -265,7 +271,7 @@ def cmd_research(topic: str, timeout: int = 900) -> int:
     print(f"tony: critic gate {gate}")
 
     results_wave = [subprocess.run(c, shell=True, capture_output=True).returncode == 0
-                    for c in res_mod.wave_cmds(report_path)]
+                    for c in res_mod.wave_cmds(report_path, sources_path)]
     b["todos"][0]["box"] = ok_n > 0
     b["todos"][1]["box"] = syn["status"] == "ok"
     boulder.add_wave(b, "report exists"); b["wave"][0]["box"] = results_wave[0]
@@ -334,7 +340,8 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
 
     gate = "N/A"
     evidence = None
-    if len(b["todos"]) >= 3:
+    # P19c: critic runs at >=2 TODOs (was >=3 — small missions got a free pass).
+    if len(b["todos"]) >= 2:
         crit_prompt = roles.critic_prompt(boulder.render(b))
         crit = eng.role_call("critic", assignments["critic"], crit_prompt, workdir,
                              timeout=timeout)

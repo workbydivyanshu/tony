@@ -24,7 +24,7 @@ class FakeWin:
         self.clear_calls = 0
         self.refresh_calls = 0
         self._keypad_set = None
-        self._nodelay_set = None
+        self._timeout_set = None
 
     def addstr(self, *args, **kwargs):
         self.addstr_calls.append((args, kwargs))
@@ -45,8 +45,12 @@ class FakeWin:
     def keypad(self, val):
         self._keypad_set = val
 
+    def timeout(self, val):
+        self._timeout_set = val
+
     def nodelay(self, val):
-        self._nodelay_set = val
+        self._nodelay_set = val  # P19b: must NOT be called (100% CPU bug)
+        raise AssertionError("nodelay() must not be used; use timeout()")
 
     def getmaxyx(self):
         return (24, 80)
@@ -231,7 +235,7 @@ def test_run_tui_timeout_returns_0():
         os.unlink(bpath)
 
 
-def test_run_tui_keypad_and_nodelay_called():
+def test_run_tui_keypad_and_bounded_timeout():
     _set_tty(True)
     bpath = _save_slug("tui-test-config", todos=("config check",), wave=())
     win = FakeWin(ch_sequence=[ord("q")])
@@ -239,7 +243,8 @@ def test_run_tui_keypad_and_nodelay_called():
     try:
         tui.run_tui("tui-test-config", interval=0, timeout=0)
         assert win._keypad_set is True
-        assert win._nodelay_set is True
+        # P19b: bounded getch wait instead of nodelay tight loop (100% CPU).
+        assert win._timeout_set is not None and win._timeout_set >= 50, win._timeout_set
     finally:
         _unpatch_curses()
         _restore_tty()

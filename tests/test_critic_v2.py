@@ -114,14 +114,14 @@ def test_partial_evidence_coverage():
 
 
 def test_full_evidence_coverage():
-    """All 3 TODOs referenced -> 1.0."""
-    out = "checked TODO 1, #2, and 3. done"
+    """All 3 TODOs referenced -> 1.0 (P19b: line-leading N. + TODO N + #N)."""
+    out = "checked TODO 1\n#2\n3. done"
     assert engine.evidence_coverage(out, ["a", "b", "c"]) == 1.0
 
 
 def test_todo_numbering_styles():
-    """Mixed numbering styles (TODO N, #N, N.) all count."""
-    out = "TODO 1 done, #2 checked, 3. verified"
+    """Mixed styles (TODO N, #N, line-leading N.) all count."""
+    out = "TODO 1 done, #2 checked\n3. verified"
     assert engine.evidence_coverage(out, ["a", "b", "c", "d"]) == 0.75
 
 

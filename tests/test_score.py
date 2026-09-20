@@ -63,12 +63,13 @@ def test_issues_zeroes_bonus():
     assert r["capped"] is False
 
 
-def test_na_half_bonus():
+def test_na_zero_bonus():
+    """P19c: N/A = no critic ran = no bonus (was half bonus; free points)."""
     compute = _run_score()
     b = _make_b(todo_done=1, todo_total=1, wave_done=1, wave_total=1)
     r = compute(b, "N/A")
-    assert r["score"] == 90, r
-    assert r["critic_bonus"] == 10
+    assert r["score"] == 80, r
+    assert r["critic_bonus"] == 0
     assert r["capped"] is False
 
 

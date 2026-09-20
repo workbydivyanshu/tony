@@ -82,11 +82,11 @@ def test_cmd_score_issues_no_bonus():
     assert tony.cmd_score(b, "ISSUES", None) == 80
 
 
-def test_cmd_score_na_half_bonus():
-    """N/A gate -> half bonus -> 90."""
+def test_cmd_score_na_zero_bonus():
+    """P19c: N/A gate -> zero bonus -> 80 (no critic, no free points)."""
     tony = _load_tony()
     b = _b(todo_done=1, todo_total=1, wave_done=1, wave_total=1)
-    assert tony.cmd_score(b, "N/A", None) == 90
+    assert tony.cmd_score(b, "N/A", None) == 80
 
 
 def test_cmd_score_empty_wave_caps_40():

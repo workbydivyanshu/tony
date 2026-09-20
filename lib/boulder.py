@@ -58,7 +58,7 @@ def progress(b: dict) -> dict:
 
 
 _ROLE_PREFIX = r"(?:(\[role:\w+\])\s+)?"
-_ITEM = re.compile(r"^-\s" + _ROLE_PREFIX + r"\[( |x)\]\s(.*)$")
+_ITEM = re.compile(r"^-\s" + _ROLE_PREFIX + r"\[([xX]| )\]\s(.*)$")
 
 
 def _parse_section(lines: list) -> list:
@@ -67,7 +67,8 @@ def _parse_section(lines: list) -> list:
         m = _ITEM.match(ln.strip())
         if m:
             tag = (m.group(1) + " ") if m.group(1) else ""
-            out.append({"box": m.group(2) == "x", "text": tag + m.group(3)})
+            out.append({"box": (m.group(2) or "").lower() == "x",
+                        "text": tag + m.group(3)})
     return out
 
 
@@ -111,9 +112,15 @@ def path_for(slug: str) -> str:
 
 
 def save(slug: str, b: dict) -> str:
+    """Atomic write (P19b): tmp file + rename so a crash never truncates a
+    boulder mid-write (the boulder is the mission ledger; corruption = loss)."""
     p = path_for(slug)
-    with open(p, "w") as f:
+    tmp = p + ".tmp"
+    with open(tmp, "w") as f:
         f.write(render(b))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, p)
     return p
 
 

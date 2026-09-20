@@ -55,7 +55,8 @@ def run_tui(slug: str, interval: int = 1, timeout: int = 0) -> int:
     curses.noecho()
     curses.cbreak()
     win.keypad(True)
-    win.nodelay(True)
+    # P19b: bounded getch wait (was nodelay(True) + tight loop = 100% CPU).
+    win.timeout(max(50, int(interval) * 1000))
 
     scroll = 0
     t0 = time.time()

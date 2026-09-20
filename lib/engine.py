@@ -84,9 +84,17 @@ def run_wave(b: dict, cwd: str = "/tmp") -> list:
     Never feed untrusted third-party text here; waves auto-retry with builder
     fixes, so a malicious command would re-run up to max_verify times."""
     from . import boulder as bmod
+    from . import waveguard
     results = []
     for i, item in enumerate(b["wave"]):
         cmd = F_LABEL.sub("", item["text"]).strip()
+        safe, reason = waveguard.check(cmd)
+        if not safe:
+            # P19a: never hand a deny-listed/unparseable command to the shell.
+            bmod.flip(b, i, False, section="wave")
+            bmod.log(b, f"wave {i+1} BLOCKED by waveguard: {reason}")
+            results.append(False)
+            continue
         try:
             proc = subprocess.run(cmd, shell=True, capture_output=True,
                                   text=True, timeout=300, cwd=cwd)
@@ -357,7 +365,9 @@ def evidence_coverage(output: str, todos: list) -> float:
     # Match #N
     for m in re.finditer(r"#(\d+)", output):
         indices.add(int(m.group(1)))
-    for m in re.finditer(r"(?<!\d)(\d+)\.\s", output):
+    # P19b: line-leading numbered evidence only — the old any-position regex
+    # matched version strings ("Python 3. 14") as TODO coverage.
+    for m in re.finditer(r"(?m)^\s*(\d+)\.\s", output):
         indices.add(int(m.group(1)))
     covered = sum(1 for i in range(1, n + 1) if i in indices)
     return covered / n

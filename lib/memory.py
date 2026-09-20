@@ -47,14 +47,19 @@ def recall(query: str | None = None, home: str | None = None,
 
 
 def forget(substr: str, home: str | None = None) -> int:
-    """Remove lines containing substr (case-insensitive). Returns count removed."""
+    """Remove lines containing substr (case-insensitive). Returns count removed.
+
+    P19b: empty/whitespace substring is a NO-OP, never a wipe (it used to
+    match every line and erase the entire memory file)."""
+    if not (substr or "").strip():
+        return 0
     p = mem_path(home)
     try:
         with open(p) as f:
             lines = [ln for ln in f]
     except FileNotFoundError:
         return 0
-    q = (substr or "").lower()
+    q = substr.lower()
     kept = [ln for ln in lines if q not in ln.lower()]
     removed = len(lines) - len(kept)
     if removed:

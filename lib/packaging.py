@@ -10,7 +10,6 @@ import subprocess
 def unit_text(tony_path: str) -> str:
     return f"""[Unit]
 Description=tony daemon (free-model-native agent CLI)
-After=graphical-session.target
 
 [Service]
 ExecStart={tony_path} --daemon
