@@ -545,3 +545,21 @@ PASS=2 FAIL=2
 - SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 9/9; --models 8 live; temp-HOME save/mark round-trip OK, zero *.tmp residue. Zero model burn, no ~/.tony mutation.
 - Honest scope (P22 precedent, no overselling): fixes torn-write corruption (crash mid-write, concurrent-writer interleave). Does NOT fix cross-process double-fire (scan->mark TOCTOU remains by design; same-minute idempotent, harmless).
 - MISSION SCORE: 88/100 (silent-refire eliminated; queued P27: doctor @pack: blind spot; parked P28: waveguard red-team probe; v0.4 tag is Vianca's call).
+
+## P27 — doctor resolves @pack: refs (2026-09-20, autonomy)
+- Seam: _check_schedules validated cron/fields but never resolved @pack: refs; both live jobs are @pack: missions, and run_due feeds the RAW ref string on missing packs while doctor stayed HEALTHY. Decision (frozen): missing pack -> WARN (fires degraded, corrupt-ledger precedent), never fail.
+- Plan lane died (30-min poll timeout + empty continuation) — self-planned from frozen queue entry; cheaper than a third plan round-trip for a one-check slice.
+- T1 delegate wrote a strong spec then hung (cancelled bg_2ac29779, same pattern as P25). Spec verified non-vacuous: mirrored _PACK_RE byte-identical to packs.py:19; packs.read_pack is home-parameterized (no P23-style isolation trap).
+- RED captured:
+```
+PASS=2 FAIL=2
+  FAIL test_pack_refs:test_missing_pack_warns AssertionError: PRE-FIX RED confirmed: got ('schedules', 'ok', '1 jobs')
+  FAIL test_pack_refs:test_two_refs_one_missing_warns_only_missing AssertionError: PRE-FIX RED: got ('schedules', 'ok', '1 jobs')
+```
+- Full suite with spec: 241 prior green + S2/S3 anchors green (S1/S4 pin the blindness for the right reason — check never consults packs).
+
+## P27 GREEN — doctor resolves @pack: refs (2026-09-20, autonomy)
+- T2 direct: _check_schedules scans each job mission with packs._PACK_RE (same set run_due expands) and warns naming job+pack when packs.read_pack(ref, home)=="" (missing OR empty — both expand to nothing at fire time). Structural fails keep precedence; live doctor HEALTHY 9/9 (both real packs present).
+- GREEN: 245/245 (241 prior unmodified + 4 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals, diff-check clean.
+- SURFACE LIVE: --selftest 4/4; --doctor HEALTHY; --models 8 live. Zero model burn, no ~/.tony mutation (missing-pack warn proven at seam only — never forced live).
+- MISSION SCORE: 88/100 (last auditor-confirmed gap closed; parked P28: waveguard red-team probe; v0.4 tag is Vianca's call).

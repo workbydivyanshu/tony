@@ -12,7 +12,7 @@ import re
 import shutil
 import subprocess
 
-from lib import catalog, mcp, sched, tiers
+from lib import catalog, mcp, packs, sched, tiers
 
 Check = tuple  # (name, status, detail); status in {ok, warn, fail, skip}
 
@@ -142,6 +142,7 @@ def _check_schedules(home: str) -> Check:
     if not isinstance(jobs, list):
         return ("schedules", "fail", "schedule.json is not a list")
     now = _dt.datetime.now()
+    missing = []  # (job, pack): refs that would expand to nothing at fire time
     for job in jobs:
         if not isinstance(job, dict):
             return ("schedules", "fail", f"schedule entry not an object: {job!r}")
@@ -155,6 +156,17 @@ def _check_schedules(home: str) -> Check:
         except ValueError as exc:
             return ("schedules", "fail",
                     f"job {name!r}: bad cron {job['cron']!r} ({exc})")
+        # Same ref set run_due expands (packs._PACK_RE); read_pack is
+        # home-scoped and returns "" for missing — that "" is what the
+        # model would receive, so an empty expansion counts as missing.
+        for ref in packs._PACK_RE.findall(job["mission"] or ""):
+            if packs.read_pack(ref, home) == "":
+                missing.append((name, ref))
+    if missing:
+        detail = "; ".join(
+            f"job {n!r} references missing pack {r!r}" for n, r in missing)
+        return ("schedules", "warn",
+                detail + " — run --install-defaults or add the pack")
     return ("schedules", "ok", f"{len(jobs)} jobs")
 
 
