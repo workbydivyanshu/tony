@@ -146,10 +146,10 @@ def test_rate_limit_success_on_retry():
 
 
 def test_backoff_then_demote_no_storm():
-    """Integration: 3×429 on m1 → backoff [5,20] → fail → _exec_one demotes
+    """Integration: 2×429 on m1 → backoff [5] → fail → _exec_one demotes
     to m2 → m2 succeeds → overall ok.
 
-    No-storm guarantee: sleep_calls has exactly [5,20] (backoff within m1),
+    No-storm guarantee: sleep_calls has exactly [5] (backoff within m1),
     then m2 runs immediately (no extra sleep)."""
     _clean()
     sleep_calls = []

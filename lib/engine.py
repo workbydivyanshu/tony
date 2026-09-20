@@ -166,8 +166,8 @@ def role_call(role: str, model: str, subtask: str, workdir: str,
 
     sleep_fn=None (default) preserves legacy single-attempt behavior exactly.
     With sleep_fn, rate-limit signals trigger bounded same-model retries:
-    initial + 2 retries max, sleeps [5, 20]; the third failure returns fail
-    WITHOUT a third sleep so the caller demotes next. Retries never cross
+    initial + 1 retry max, sleep [5]; the second failure returns fail
+    WITHOUT a second sleep so the caller demotes next. Retries never cross
     models, so backoff and demote-once-then-BLOCKED compose with no storms.
     Sleeps run outside _LOCK so parallel explorers never block each other."""
     from .catalog import resolve_bin
@@ -237,7 +237,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
         if len(models) > 1:
             model2 = models[1]
             res2 = role_call(role, model2, todo["text"], workdir, runner=runner,
-                             timeout=timeout, runslog=runslog, sleep_fn=sleep_fn)
+                             timeout=role_timeout(role, timeout), runslog=runslog, sleep_fn=sleep_fn)
             if res2["status"] == "ok":
                 bmod.flip(b, i, True)
                 bmod.log(b, f"TODO {i+1} done on demote via {model2} -> {res2['outfile']}")

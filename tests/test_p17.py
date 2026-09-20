@@ -38,6 +38,27 @@ def test_exec_applies_budget():
     shutil.rmtree(d, ignore_errors=True)
 
 
+def test_demote_applies_budget():
+    from lib import engine
+    seen = []
+
+    def fake_run(cmd, **kw):
+        seen.append(kw.get("timeout"))
+        class P: returncode = 1; stdout = ""; stderr = "boom"
+        return P()
+    import tempfile, shutil
+    d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "work"), exist_ok=True)
+    from lib import boulder
+    b = boulder.new("t")
+    boulder.add_todo(b, "[role:explorer] hard thing")
+    engine._exec_one(b, 0, {"explorer": ["m1", "m2"]}, os.path.join(d, "work"),
+                     runner=fake_run, runslog=os.path.join(d, "runs.log"),
+                     sleep_fn=None, timeout=600)
+    assert seen == [240, 240], seen  # primary + demote both capped
+    assert b["todos"][0]["text"].endswith("[BLOCKED]")
+    shutil.rmtree(d, ignore_errors=True)
+
+
 def test_effective_timeout_fast():
     from lib import engine
     assert engine.effective_timeout(600, False) == 600
