@@ -105,3 +105,99 @@ def scan_subjects(items: list, keywords: list) -> list:
         if any(kw.lower() in text for kw in keywords):
             hits.append(item)
     return hits
+
+
+_READ_CODE = ("(() => JSON.stringify({text: document.title + ' || ' + "
+              "(document.body ? document.body.innerText : ''), next: "
+              "!!([...document.querySelectorAll('button')].find(x => "
+              "(x.textContent||'').trim() === 'Next page' && "
+              "String(x.className||'').includes('tiny') && !x.disabled))}))()")
+
+_TURN_CODE = ("(() => { const scope = document.querySelector('nav.mail-toolbar'); "
+              "const btns = scope ? [...scope.querySelectorAll('button')] : "
+              "[...document.querySelectorAll('button')]; const b = btns.find(x => "
+              "(x.textContent||'').trim() === 'Next page' && "
+              "String(x.className||'').includes('tiny') && !x.disabled); "
+              "if (!b) return 'NO-NEXT'; b.click(); return 'TURNED'; })()")
+
+
+def _default_ev(session: str):
+    """Default ev: evaluate through post(). Read-only codes only."""
+    def ev(code: str) -> str:
+        res = post("evaluate", {"code": code}, session)
+        data = res.get("data", res)
+        val = data.get("value", "") if isinstance(data, dict) else data
+        return val if isinstance(val, str) else str(val)
+    return ev
+
+
+def read_inbox_page(session: str, ev=None) -> dict:
+    """Read current list page -> {text, has_next}. Never clicks."""
+    if ev is None:
+        ev = _default_ev(session)
+    try:
+        data = json.loads(ev(_READ_CODE))
+    except (ValueError, TypeError):
+        return {"text": "", "has_next": False}
+    if not isinstance(data, dict):
+        return {"text": "", "has_next": False}
+    return {"text": data.get("text", ""), "has_next": bool(data.get("next"))}
+
+
+def turn_inbox_page(session: str, ev=None) -> bool:
+    """Click the list-toolbar Next pager (advances the LIST only; opens
+    no emails, mutates no site data). Returns True when turned."""
+    if ev is None:
+        ev = _default_ev(session)
+    try:
+        return ev(_TURN_CODE) == "TURNED"
+    except Exception:
+        return False
+
+
+def scan_inbox_pages(session: str, ev=None, keywords=(), max_pages: int = 12,
+                     settle_fn=None) -> dict:
+    """Walk list pages to the end (or max_pages): read, keyword-scan each
+    page text via scan_subjects, turn while a next pager exists. Returns
+    {pages, subjects, hits:[{page, subject}]}. settle_fn(seconds) runs
+    after each turn so the next read sees the new page."""
+    if ev is None:
+        ev = _default_ev(session)
+    kw = tuple(keywords or ())
+    pages = 0
+    subjects = 0
+    hits: list = []
+    while pages < max_pages:
+        page = read_inbox_page(session, ev)
+        pages += 1
+        subjects += 1
+        if kw:
+            for h in scan_subjects([{"subject": page["text"], "sender": ""}],
+                                   list(kw)):
+                hits.append({"page": pages, "subject": h["subject"][:200]})
+        if not page["has_next"]:
+            break
+        if not turn_inbox_page(session, ev):
+            break
+        if settle_fn is not None:
+            settle_fn(3)
+    return {"pages": pages, "subjects": subjects, "hits": hits}
+
+
+def parse_inbox_rows(text: str) -> list:
+    """PURE: split Proton list text on 'Star conversation' markers into
+    [{sender, subject}]. Sender = first line of each chunk, subject = the
+    rest joined (date lines included — harmless for keyword scans).
+    Marker-less text (login walls, empty) -> [] and never raises."""
+    rows: list = []
+    try:
+        chunks = (text or "").split("Star conversation")
+    except Exception:
+        return []
+    for chunk in chunks[1:]:
+        lines = [ln.strip() for ln in chunk.splitlines() if ln.strip()]
+        if not lines:
+            continue
+        rows.append({"sender": lines[0],
+                     "subject": " ".join(lines[1:])})
+    return rows
