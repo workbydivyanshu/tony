@@ -443,3 +443,12 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - GREEN: 195/195 (187 + 8), py_compile ok, keyless 0, git diff --check clean.
 - LIVE install on real HOME: packs seeded + both schedules added; `--list-schedule` valid JSON; next fires 2026-09-21 07:00 (brief) and 2026-09-27 09:00 (hygiene); systemd daemon active and will serve them through the normal run_due path. No model burn (no due window at install time).
 - Commit f686dcd. MISSION SCORE: 88/100 — P18 verified; live model-fired pack mission still unproven until the next due window.
+
+
+## P19 — external-review hardening (2026-09-20, Vianca: "make tony god level")
+- Input: Codex 48/100 (sub-agent 42 BLOCK) + Antigravity 22-32; synthesis in ~/.fleet/out/tony-external-reviews-synthesis.md. Every claim verified against the tree before acting; one AG claim (roles run sequentially) disproven.
+- P19a TRUST: lib/waveguard.py — deny-list (sudo/disk/fork-bomb/remote-shell/power) + sh -n parse gate BEFORE engine.run_wave shell=True; hostile sudo rm -rf wave → FAIL+log, never executed (seam proof F3). Research citations now membership-verified (report URLs ⊆ explorer corpus) — URL counting demoted to legacy mode.
+- P19b BUGS (all 7 from reviews): forget("") wipe → no-op; chat multiline escape/unescape (incl backslash literals); boulder [X] parses checked; boulder.save tmp+fsync+replace atomic; tui nodelay tight loop → bounded win.timeout; evidence_coverage version-string false positives → line-leading anchor only; systemd unit dropped After=graphical-session.
+- P19c HONESTY: critic at >=2 TODOs (was 3); N/A gate bonus 10 → 0 (no free points; 1-TODO cap 80). Two score pins updated deliberately with rationale.
+- P19d PACKAGING: README (honest, security model first), pyproject.toml (ruff+mypy config, vendored excluded), run_tests.py stdlib runner; ruff 0 across project scope, mypy 0 in 26 files.
+- RED 14/17 → GREEN 212/212 (195+17). py_compile clean, keyless 0, --models live, daemon active. Commits ce5f994 + 7802315, correct authorship. MISSION SCORE: 85/100 (live model-fired waveguard/citation proof pending the next free scheduler window).
