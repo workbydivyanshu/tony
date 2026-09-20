@@ -635,3 +635,10 @@ PASS=0 FAIL=1
 - No remote existed; gh authed as workbydivyanshu. Pre-publish audit: keyless verified, .omo strays inert session JSON (no secrets), no memory/inbox/runs tracked.
 - Created https://github.com/workbydivyanshu/tony (PUBLIC), pushed master + v0.4 (both 120a227, verified via ls-remote). Older tags v0.1–v0.3 left local-only.
 - MISSION SCORE: 95/100 — Tony is public and released.
+
+## INCIDENT 02:40 tree rewrite (2026-09-21, restored same night)
+- 02:40:35: bulk rewrite of tracked files to OLD versions (NOTEPAD -421, engine/tony gutted, test_p*.py + vendored strays restored, .gitignore de-ignored). Shape = archive-extract/copy from an old commit (unstaged mods, not git-checkout which would stage). 02:45: 4 big-pickle builder rows in runs.log (dur 0.0s, ok) with NO boulder/workdir/journal trace.
+- Vianca confirms no human/other-agent activity on her terminal. Prime suspect: my own delegated subagents (release-audit explore cancelled ~02:40 after hanging in one bash call 20 min; one spec delegate looped degenerately earlier). Cannot prove which; daemon/scheduler/inbox all have alibis (no due jobs, no inbox activity).
+- Recovery: git checkout HEAD -- . + rm 7 restored test_p*.py strays; suite 281/281 green; all commits intact; zero loss. Vendored dirs left on disk untouched (possibly her clone; ignored).
+- Prevention (self-imposed): every future delegation prompt carries explicit MUST NOT DO (no git/archive/tar/cp/restore commands, read-only means read-only); tree-clean check after EVERY delegation return, not just at commit.
+- Open: concurrent-writer risk in ~/tony stands (no locking). If it recurs, add a tripwire.
