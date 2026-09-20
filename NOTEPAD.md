@@ -528,3 +528,20 @@ PASS=1 FAIL=2
 - GREEN: 237/237 (234 prior unmodified + 3 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals, diff-check clean.
 - SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 9/9; --models 8 live; --version 0.4.0-p24. Zero model burn, no stray procs.
 - MISSION SCORE: 90/100 (double-daemon now degrades to yield+repoll instead of crash-loop; remaining ceiling is a live two-daemon proof, deliberately never forced).
+
+## P26 — sched atomic persistence (2026-09-20, autonomy)
+- Seam verified by plan agent: sched.save + mark_fired plain-open("w")+dump (sched.py:166-171,230-237); torn write -> load/load_ledger swallow as []/{} -> fired jobs silently refire. P25's loser-yields makes two live daemons the normal case. Scope honesty: fixes torn writes, NOT cross-process double-fire (same-minute idempotent, harmless by design).
+- RED captured:
+```
+PASS=2 FAIL=2
+  FAIL test_sched_atomic:test_interrupted_save_keeps_prior_jobs AssertionError: expected 2 prior jobs, got []
+  FAIL test_sched_atomic:test_interrupted_mark_keeps_prior_ledger AssertionError: expected prior ledger entry, got {}
+```
+- Full suite with spec: 237 prior green + S3/S4 anchors green (S1/S2 pin the torn write).
+
+## P26 GREEN — sched atomic persistence (2026-09-20, autonomy)
+- T2: _write_json_atomic (makedirs + tmp + flush + fsync + replace, boulder.save mirror) routed through save() + mark_fired(); signatures, indent=2, load swallow-semantics untouched.
+- GREEN: 241/241 (237 prior unmodified + 4 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals, diff-check clean.
+- SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 9/9; --models 8 live; temp-HOME save/mark round-trip OK, zero *.tmp residue. Zero model burn, no ~/.tony mutation.
+- Honest scope (P22 precedent, no overselling): fixes torn-write corruption (crash mid-write, concurrent-writer interleave). Does NOT fix cross-process double-fire (scan->mark TOCTOU remains by design; same-minute idempotent, harmless).
+- MISSION SCORE: 88/100 (silent-refire eliminated; queued P27: doctor @pack: blind spot; parked P28: waveguard red-team probe; v0.4 tag is Vianca's call).

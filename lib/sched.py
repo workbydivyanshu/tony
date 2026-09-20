@@ -163,11 +163,19 @@ def load(home: str | None = None) -> list:
     return jobs if isinstance(jobs, list) else []
 
 
+def _write_json_atomic(path: str, obj: object) -> None:
+    _os.makedirs(_os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        _json.dump(obj, f, indent=2)
+        f.flush()
+        _os.fsync(f.fileno())
+    _os.replace(tmp, path)
+
+
 def save(home: str | None, jobs: list) -> str:
     p = sched_path(home)
-    _os.makedirs(_os.path.dirname(p), exist_ok=True)
-    with open(p, "w") as f:
-        _json.dump(jobs, f, indent=2)
+    _write_json_atomic(p, jobs)
     return p
 
 
@@ -230,11 +238,9 @@ def scan_due(home: str | None = None, now: _dt.datetime | None = None) -> list:
 def mark_fired(home: str | None, name: str, now: _dt.datetime | None = None) -> None:
     now = now or _dt.datetime.now()
     p = ledger_path(home)
-    _os.makedirs(_os.path.dirname(p), exist_ok=True)
     ledger = load_ledger(home)
     ledger[name] = minute_key(now)
-    with open(p, "w") as f:
-        _json.dump(ledger, f, indent=2)
+    _write_json_atomic(p, ledger)
 
 
 def run_due(home: str | None, mission_fn, now: _dt.datetime | None = None) -> dict | None:
