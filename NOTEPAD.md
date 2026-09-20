@@ -583,3 +583,8 @@ PASS=1 FAIL=1
 - Audit: external explore hung in one bash call (~20 min, cancelled bg_48518f2f — third hang this week). Self-audit instead: full v0.3..HEAD lib diff reviewed hunk-by-hunk (830 ins). Every behavior change matches its NOTEPAD rationale (P19a/b/c, P22, P24–P28); new files all spec-pinned; tony CLI removals all have pinned replacements. Verdict: SHIP, zero blockers. NOTE (non-blocking, pre-existing P18): run_due on fully-missing pack expands to "" and fires an empty mission — degraded, doctor now warns; queued, not a gate.
 - Triage F1-F4: suite 247/247; keyless grep 0; --selftest 4/4; --doctor HEALTHY 9/9 exit 0; --models 7 live + role map (catalog churn 8→7, patterns self-healed); --status JSON valid; daemon active.
 - Tagging v0.4 on the ledger commit below. Push left for Vianca (never push unasked).
+
+## v0.4 PUSHED (2026-09-20, autonomy — Vianca: "Push v0.4" then "Public tony repo")
+- No remote existed; gh authed as workbydivyanshu. Pre-publish audit: keyless verified, .omo strays inert session JSON (no secrets), no memory/inbox/runs tracked.
+- Created https://github.com/workbydivyanshu/tony (PUBLIC), pushed master + v0.4 (both 120a227, verified via ls-remote). Older tags v0.1–v0.3 left local-only.
+- MISSION SCORE: 95/100 — Tony is public and released.
