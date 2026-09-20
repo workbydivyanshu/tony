@@ -623,6 +623,14 @@ PASS=0 FAIL=1
 - GREEN: 281/281 (suite untouched, docs-only). --help live-verified.
 - MISSION SCORE: 85/100 (hygiene slice; value is promises-vs-reality contract, not capability).
 
+## T1 — self-improvement trial: empty-mission guard (2026-09-21, autonomy)
+- Pack live: ~/.tony/packs/tony-self-improvement.md (TDD law, RED-right-reason rule, gates, commit law, forbid list) renders via --pack. Rungs 1-2 only; human pushes.
+- Delegation lane DOWN (3 consecutive launch errors) — trial executed direct; army-of-agents unavailable tonight, noted for the verdict.
+- Trial slice: run_due dispatched "" to the model when all @pack refs dangled (ghost packs), burning a call and marking fired. Guard: skip loudly as skipped-empty-mission, ledger advances (same-minute idempotent), model never called.
+- RED: status ok + report NEVER (right reason — dispatched emptiness). GREEN: 284/284 (281 prior unmodified + 3 new). ruff 0, mypy 0 (28 files), keyless 0.
+- SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 10/10; schedules intact (3 jobs).
+- MISSION SCORE: 88/100 (trial proves the pack transmits to a careful reader; the delegation failure means Tony-on-Tony via agents is unproven — verdict below).
+
 ## P29 — waveguard destructive moves (2026-09-20, autonomy)
 - Deliberate probe #2 (18 candidates as strings, never executed): 9 true slips pinned — mv /*, mv-to-/dev/null ($HOME/~/work forms), find -delete (incl /-rooted), ln to dotfile/devnull, redirect into home dotfiles ($HOME/${HOME} forms included). Documented OUT (not pinned, not hardened): cp/tar/zip/cat reads (exfil = sandbox problem), chmod/chown non-root (recoverable via git), obfuscated interpreter payloads (regex-uncatchable without theater), plain mv renames (harmless).
 - Assessed-not-changed (honest no-op): H2 wrapper-routing — frozen spec's zero-arg fakes forbid routing wrappers through post(); wrappers are parse-helpers, post() is the driver (H1 proof already drives post() directly). Queued notes that died on contact with the spec stay dead.

@@ -258,6 +258,15 @@ def run_due(home: str | None, mission_fn, now: _dt.datetime | None = None) -> di
         mission_text = _packs.expand(job["mission"], home)
     except Exception:
         mission_text = job["mission"]
+    if not (mission_text or "").strip():
+        # T1 self-trial: all refs dangled (ghost packs) — dispatching ""
+        # burns a model call on nothing and marks fired as if work happened.
+        # Skip loudly (ledger still advances: same-minute idempotent).
+        mark_fired(home, job["name"], now)
+        return {"name": "sched-" + job["name"],
+                "status": "skipped-empty-mission",
+                "report": f"mission expanded to empty "
+                          f"(refs: {job['mission']!r}); model not called"}
     try:
         report = mission_fn(mission_text, "sched-" + job["name"])
         status = "ok"
