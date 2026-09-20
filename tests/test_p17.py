@@ -1,5 +1,6 @@
 """tests/test_p17.py — P17 RED: role timeout budgets + short backoff."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
@@ -26,7 +27,8 @@ def test_exec_applies_budget():
         seen["timeout"] = kw.get("timeout")
         class P: returncode = 0; stdout = "ok"; stderr = ""
         return P()
-    import tempfile, shutil
+    import tempfile
+    import shutil
     d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "work"), exist_ok=True)
     from lib import boulder
     b = boulder.new("t")
@@ -46,7 +48,8 @@ def test_demote_applies_budget():
         seen.append(kw.get("timeout"))
         class P: returncode = 1; stdout = ""; stderr = "boom"
         return P()
-    import tempfile, shutil
+    import tempfile
+    import shutil
     d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "work"), exist_ok=True)
     from lib import boulder
     b = boulder.new("t")

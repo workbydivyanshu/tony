@@ -1,8 +1,11 @@
 """P5d RED proof: config.load/set_role + tiers.assign_roles_with_sources."""
-import sys, os, shutil, re
+import sys
+import os
+import shutil
+import re
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from lib import tiers, catalog
+from lib import tiers
 
 
 # --- helpers ---

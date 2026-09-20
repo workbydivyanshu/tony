@@ -1,5 +1,6 @@
 """tests/test_research.py — P13 RED: research fan-out helpers."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
@@ -24,7 +25,8 @@ def test_synthesis_prompt():
 
 def test_wave_cmds():
     from lib import research
-    import tempfile, os
+    import tempfile
+    import os
     d = tempfile.mkdtemp()
     rp = os.path.join(d, "r.md")
     cmds = research.wave_cmds(rp)

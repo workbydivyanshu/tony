@@ -1,5 +1,8 @@
 """tests/test_p18_packs.py — P18 packs loader (read_pack, packs_dir)."""
-import sys, os, tempfile, shutil
+import sys
+import os
+import tempfile
+import shutil
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 

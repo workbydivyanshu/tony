@@ -1,5 +1,6 @@
 """P-next RED proof: plan-gate must exist (confirm before any builder call)."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib import plangate

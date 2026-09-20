@@ -13,7 +13,8 @@ CACHE_TTL = 60
 
 def parse_models(raw: str) -> list:
     """Ground truth extractor: lines starting with opencode/. Never hardcode ids."""
-    return sorted({l.strip() for l in raw.splitlines() if l.strip().startswith("opencode/")})
+    return sorted({line.strip() for line in raw.splitlines()
+                   if line.strip().startswith("opencode/")})
 
 
 def _cache_read() -> list | None:

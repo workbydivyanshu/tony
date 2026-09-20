@@ -3,7 +3,8 @@
 apply_critic_gate takes fix_fn as a parameter, so call-before-def ordering
 crashes are structurally impossible. These pins lock the behavior.
 """
-import sys, os, shutil
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib import engine, boulder

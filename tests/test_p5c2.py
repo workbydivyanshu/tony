@@ -1,5 +1,7 @@
 """P5c-2 RED proof: progress + render_snapshot + critic_gate."""
-import sys, os, shutil
+import sys
+import os
+import shutil
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib import engine, boulder, watch

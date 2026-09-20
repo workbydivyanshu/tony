@@ -6,7 +6,8 @@ before implementation must fail (ImportError or AttributeError).
 GREEN: 8+ canned cases covering strict PASS/ISSUES, legacy fallback (weak),
 BYPASS/PASSED traps, empty output, partial evidence, full evidence.
 """
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib import boulder

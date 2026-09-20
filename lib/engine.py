@@ -266,7 +266,7 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
     Batch scan uses resolve_role(todo) pure (no log); _exec_one re-resolves with
     b and records the unknown-tag fallback exactly once (review note 1)."""
     import concurrent.futures as cf
-    batch = []
+    batch: list = []
 
     def flush():
         if not batch:

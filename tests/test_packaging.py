@@ -1,5 +1,6 @@
 """tests/test_packaging.py — P14 RED: systemd unit + notify hook must not exist."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 

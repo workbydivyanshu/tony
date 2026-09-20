@@ -78,7 +78,7 @@ def parse(text: str) -> dict:
     title_m = re.search(r"^# Boulder:\s*(.+)$", text, re.M)
     if title_m:
         title = title_m.group(1).strip()
-    cur = []
+    cur: list = []
     def flush():
         nonlocal todos, wave
         if section == "todos":
@@ -87,21 +87,29 @@ def parse(text: str) -> dict:
             wave = _parse_section(cur)
     for ln in text.splitlines():
         if ln.startswith("## TODOs"):
-            flush(); section = "todos"; cur = []
+            flush()
+            section = "todos"
+            cur = []
         elif ln.startswith("## Final Verification Wave"):
-            flush(); section = "wave"; cur = []
+            flush()
+            section = "wave"
+            cur = []
         elif ln.startswith("## Progress Log"):
-            flush(); section = "log"; cur = []
+            flush()
+            section = "log"
+            cur = []
         elif ln.startswith("#"):
-            flush(); section = None; cur = []
+            flush()
+            section = None
+            cur = []
         elif section in ("todos", "wave", "log"):
             cur.append(ln)
     flush()
     if section == "log":
-        log = [l for l in cur if l.strip()]
+        log = [line for line in cur if line.strip()]
     else:
-        log = [l for l in text.split("## Progress Log", 1)[-1].splitlines() if l.strip()] \
-            if "## Progress Log" in text else []
+        log = [line for line in text.split("## Progress Log", 1)[-1].splitlines()
+               if line.strip()] if "## Progress Log" in text else []
     return {"title": title, "todos": todos, "wave": wave, "log": log}
 
 

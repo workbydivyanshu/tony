@@ -157,6 +157,9 @@ def cmd_chat(session, timeout: int = 600) -> int:
     models = catalog.live_catalog()
     assignments = tiers.assign_roles(models)
     model = assignments.get("scribe") or assignments.get("explorer")
+    if not model:
+        print("tony: no fast-tier model available for chat", file=sys.stderr)
+        return 1
     workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", "chat-" + name)
     print(f"tony chat [{name}] on {model} — /quit to exit")
 
@@ -274,8 +277,10 @@ def cmd_research(topic: str, timeout: int = 900) -> int:
                     for c in res_mod.wave_cmds(report_path, sources_path)]
     b["todos"][0]["box"] = ok_n > 0
     b["todos"][1]["box"] = syn["status"] == "ok"
-    boulder.add_wave(b, "report exists"); b["wave"][0]["box"] = results_wave[0]
-    boulder.add_wave(b, ">=3 cited URLs"); b["wave"][1]["box"] = results_wave[1]
+    boulder.add_wave(b, "report exists")
+    b["wave"][0]["box"] = results_wave[0]
+    boulder.add_wave(b, "citations verified from explorer corpus")
+    b["wave"][1]["box"] = results_wave[1]
     boulder.log(b, f"critic gate {gate}; wave {sum(results_wave)}/2")
     boulder.save(slug, b)
     score = score_mod.compute(b, gate)["score"]
@@ -567,6 +572,7 @@ def cmd_packs(name: str | None = None) -> int:
     for n in found:
         body = packs_mod.read_pack(n)
         print(f"{n}  ({len(body)} chars)")
+    return 0
 
 
 def cmd_install_defaults() -> int:

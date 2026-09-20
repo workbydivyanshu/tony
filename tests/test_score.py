@@ -3,7 +3,8 @@
 Importing lib.score before implementation raises ImportError.
 Once lib/score.py exists, all cases below must pass.
 """
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib import boulder

@@ -1,5 +1,6 @@
 """P8 RED proof: lib/memory must exist with remember/recall/forget + prompt injection."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib import memory, roles

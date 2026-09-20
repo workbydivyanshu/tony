@@ -142,10 +142,12 @@ def run_once(inbox: str, mission_fn, home: str | None = None) -> dict | None:
         status = "fail"
     ddir = done_dir(home)
     os.makedirs(ddir, exist_ok=True)
-    rpath = os.path.join(ddir, stem + ".done.md")
+    rpath: str | None = None
     try:
-        with open(rpath, "w") as f:
+        p = os.path.join(ddir, stem + ".done.md")
+        with open(p, "w") as f:
             f.write(f"# {stem} — {status}\n\n{report}\n")
+        rpath = p
     except OSError:
         rpath = None
     try:

@@ -1,5 +1,6 @@
 """tests/test_p16.py — P16 RED: latency pin must capture today's slow lane honestly."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 

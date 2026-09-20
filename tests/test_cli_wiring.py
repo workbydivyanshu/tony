@@ -6,7 +6,6 @@ Plain-assert style (pytest broken in this env).
 """
 import sys
 import os
-import types
 import inspect
 import importlib.util
 import importlib.machinery
@@ -124,7 +123,6 @@ def test_cmd_score_delegates_to_score_compute():
 
 def test_run_loop_accepts_timeout():
     """engine.run_loop signature must include timeout parameter."""
-    import inspect
     from lib import engine
     sig = inspect.signature(engine.run_loop)
     assert "timeout" in sig.parameters, f"run_loop missing timeout param: {list(sig.parameters)}"
@@ -132,7 +130,6 @@ def test_run_loop_accepts_timeout():
 
 def test_exec_one_accepts_timeout():
     """engine._exec_one signature must include timeout parameter."""
-    import inspect
     from lib import engine
     sig = inspect.signature(engine._exec_one)
     assert "timeout" in sig.parameters, f"_exec_one missing timeout param: {list(sig.parameters)}"
@@ -140,7 +137,6 @@ def test_exec_one_accepts_timeout():
 
 def test_timeout_default_600():
     """Both run_loop and _exec_one default timeout to 600."""
-    import inspect
     from lib import engine
     rl_def = inspect.signature(engine.run_loop).parameters["timeout"].default
     eo_def = inspect.signature(engine._exec_one).parameters["timeout"].default

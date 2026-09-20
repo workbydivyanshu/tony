@@ -1,5 +1,6 @@
 """tests/test_p15.py — P15 RED: critic verdict parse + chat skill injection."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 

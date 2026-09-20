@@ -1,5 +1,7 @@
 """P5a RED proof: role tags + parallel explorers + max-verify must exist."""
-import sys, os, time
+import sys
+import os
+import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib import engine, boulder

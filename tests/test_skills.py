@@ -1,5 +1,6 @@
 """tests/test_skills.py — P12 RED: skill loader must not exist yet (import fails)."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 

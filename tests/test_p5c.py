@@ -1,5 +1,6 @@
 """P5c-1 RED proof: --resume continuity + --keep-going wave gating."""
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from lib import engine, boulder

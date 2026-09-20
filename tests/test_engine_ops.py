@@ -6,7 +6,6 @@ All tests use fake runners + fake sleep_fn → milliseconds, zero real sleeping.
 import os
 import shutil
 import sys
-import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -184,7 +183,7 @@ def test_backoff_then_demote_no_storm():
     # Sleeps only during m1 backoff, NOT after demote
     assert sleep_calls == [5], f"expected [5] (no storm), got {sleep_calls}"
     # Demote succeeded
-    assert b["todos"][0]["box"] is True, f"expected box True"
+    assert b["todos"][0]["box"] is True, "expected box True"
 
 
 def test_sleep_fn_default_is_none():

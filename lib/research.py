@@ -5,7 +5,6 @@ websearch MCP) -> researcher synthesis with cited sources -> critic gate ->
 wave (report exists, >=3 http URLs). This module holds the pure prompt/wave
 builders; orchestration lives in tony.cmd_research."""
 import os
-import re
 
 ANGLES = (
     "current landscape: what exists today, who the main players/approaches are",
