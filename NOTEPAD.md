@@ -476,3 +476,23 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - From P21 live-fire finding: ISSUES -> builder fix FAILED -> wave ran with no explicit override line in the chain.
 - apply_critic_gate now returns (gate, fix_status): none|ok|fail|held. Failed fix (return "fail"/False or raise) writes "ISSUES OVERRIDE — builder fix failed; wave results are UNVERIFIED-until-they-pass" to the boulder; cmd_mission also prints it pre-wave where a human sees it.
 - RED 3 failing first (tuple unpack + missing OVERRIDE), GREEN 221/221 (217+4). Gate pins migrated deliberately. ruff+mypy clean, keyless 0. Commit c18799e. MISSION SCORE: 92/100.
+
+
+## P23 --doctor (plan: ses_f41993632ffe5zWinfMlEPC439)
+- Pin the seam for `lib/doctor.py`'s `run_all(home, catalog_fn, mcp_fn, run_fn, which_fn) -> [(name, status, detail)]` with status in {ok, warn, fail, skip}.
+- tests/test_doctor.py written with 8 bare `def test_*():` functions (plain asserts, no pytest/decorators) + one CLI-wiring source pin (`--doctor` flag, `cmd_doctor` def, dispatch string).
+- All dependencies faked: temp HOME via `tempfile.mkdtemp` + `shutil.rmtree` in try/finally; fake `catalog_fn`/`mcp_fn`/`run_fn`/`which_fn` lambdas; `run_fn` raising `FileNotFoundError` for systemctl-absent case. Zero live model calls, zero real sleep, zero real-HOME mutation, zero daemon/systemctl state changes.
+- 8 behaviors pinned: all-ok healthy path; binary-missing -> fail; catalog_fn raises/empty -> fail with detail; run_fn raising FileNotFoundError -> skip; unit installed-but-inactive (nonzero returncode) -> warn; bad cron names the job -> fail; corrupt ledger -> warn; present-but-unwritable home -> fail. Fresh-machine (absent-but-creatable ~/.tony paths) pinned as detail/ok.
+- RED captured:
+```
+PASS=0 FAIL=1
+  FAIL test_doctor:import ModuleNotFoundError: No module named 'lib.doctor'
+```
+- lib/doctor.py not yet created — this is the expected seam-pin RED state.
+
+## P23 GREEN — --doctor self-diagnosis (2026-09-20, autonomy)
+- T2 needed 2 delegate attempts then direct implementation: quick-lane delegates ruminated on the bad-cron semantics + CLI-pin contradiction instead of writing. Resolved: .tony-present-but-no-schedule.json -> schedules FAIL (half-initialized home IS sick); empty catalog/MCP -> ok (fresh-machine test forbids fails/warns); CLI pin declared T4 scope. Lesson: single-file fully-specified tasks go direct after one delegation failure, not two.
+- T1 test file revealed a real design constraint the plan missed: sched.load/load_ledger swallow corruption (return []/{}) and config.load reads real HOME — doctor reads home-scoped JSON directly to honor temp-HOME isolation.
+- GREEN: 231/231 (221 prior unmodified + 10 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals.
+- SURFACE LIVE: --doctor HEALTHY 9/9 exit 0 (8 models, 2 sched jobs, daemon active, 5 MCP); --selftest 4/4; --models 8 live. Zero model burn.
+- MISSION SCORE: 90/100 (self-diagnosing now; remaining ceiling is live failure-path proof, which must never be forced on the real home).

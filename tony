@@ -13,7 +13,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import boulder, catalog, config, mcp, memory as mem_mod, roles, score as score_mod, tiers, watch  # noqa: E402
+from lib import boulder, catalog, config, doctor, mcp, memory as mem_mod, roles, score as score_mod, tiers, watch  # noqa: E402
 
 VERSION = "0.4.0-p18"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
@@ -116,6 +116,19 @@ def cmd_mcp_status(_args) -> int:
         mark = "connected" if s["connected"] else "UNREACHABLE"
         print(f"  {s['name']:12s} {mark}")
     return 0
+
+
+def cmd_doctor() -> int:
+    results = doctor.run_all()
+    counts = {"ok": 0, "warn": 0, "fail": 0, "skip": 0}
+    for name, status, detail in results:
+        counts[status] += 1
+        print(f"DOCTOR {status} {name}: {detail}")
+    summary = "HEALTHY" if counts["fail"] == 0 else "SICK"
+    print(f"DOCTOR SUMMARY: {summary} ({counts['ok']} ok, "
+          f"{counts['warn']} warn, {counts['fail']} fail, "
+          f"{counts['skip']} skip)")
+    return 0 if counts["fail"] == 0 else 1
 
 
 def cmd_remember(fact: str) -> int:
@@ -675,6 +688,7 @@ def main(argv=None) -> int:
     p.add_argument("--pack", metavar="NAME", default=None, help="print one domain pack body (referenced in missions as @pack:NAME)")
     p.add_argument("--install-defaults", action="store_true", help="seed builtin packs + morning-brief/memory-hygiene schedules (idempotent)")
     p.add_argument("--selftest", action="store_true", help="self-verify: run stock suite + waveguard seam + ruff/mypy, print one PASS/FAIL line each")
+    p.add_argument("--doctor", action="store_true", help="self-diagnose: binary, catalog, roles, config, daemon, schedules, paths, MCP; exit 1 on any fail")
     p.add_argument("--research", metavar="TOPIC", default=None, help="deep-research fan-out: 3 parallel explorers (websearch MCP) -> cited synthesis -> critic gate")
     p.add_argument("--install-daemon", action="store_true", help="write + enable the systemd user unit (tony --daemon at login, no sudo)")
     p.add_argument("--remember", metavar="FACT", default=None, help="append one dated fact to ~/.tony/memory/MEMORY.md")
@@ -786,6 +800,8 @@ def main(argv=None) -> int:
         return cmd_install_defaults()
     if args.selftest:
         return selftest_exit(cmd_selftest())
+    if args.doctor:
+        return cmd_doctor()
     if args.packs or args.pack:
         return cmd_packs(args.pack)
     if args.mcp_status:

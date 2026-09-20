@@ -52,6 +52,7 @@ is hardcoded.
 | Memory | `--remember/--recall/--forget/--memory` |
 | Skills | `--skills` (keyword-matched `.md` doctrine injected into the architect) |
 | Chat | `--chat [SESSION]` |
+| Doctor | `--doctor` (self-diagnose: binary, catalog, roles, config, daemon, schedules, paths, MCP) |
 
 Everything lives under `~/.tony/` (boulders, memory, packs, schedule,
 inbox, work dirs, runs.log). Reports land in `~/.fleet/out/`.
