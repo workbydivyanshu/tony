@@ -433,3 +433,13 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - Demote retry now capped by role_timeout(role, timeout) like the primary (was raw timeout — stall could escape the budget on fallback).
 - test_demote_applies_budget pins [240,240] + BLOCKED; stale [5,20]/3x docstring fixed to P17 contract.
 - GREEN: 187/187 (186 + 1), py_compile ok, keyless 0 in lib/tony. No live burn (seam proof).
+
+
+## P18 — domain packs + Hermes-gap defaults (2026-09-20, VISION)
+- Goal: close the first Hermes-only surfaces — morning briefing (07:00 daily) and memory hygiene (Sun 09:00) — without hardcoding long prompts into schedule.json.
+- lib/packs.py: `~/.tony/packs/<name>.md`; `read_pack()` trims + 8KB cap; missing/unreadable/directory -> empty, never raises; slug-only names block traversal. `@pack:<name>` expands in `sched.run_due` (scheduler seam) and `cmd_mission` (direct missions). Builtin seeds: `morning-briefing`, `memory-hygiene`; `ensure_defaults()` idempotent and never overwrites user packs/jobs.
+- CLI: `--packs`, `--pack NAME`, `--install-defaults`. VERSION finally unstuck from P1 -> `0.4.0-p18` (stale-string defect found in self-review).
+- Tests: test_p18_packs 8 pins (read/trim/cap/unreadable, traversal, expansion, defaults idempotence, run_due seam, CLI wiring). RED captured before GREEN: run_due was passing raw `@pack:` to mission_fn.
+- GREEN: 195/195 (187 + 8), py_compile ok, keyless 0, git diff --check clean.
+- LIVE install on real HOME: packs seeded + both schedules added; `--list-schedule` valid JSON; next fires 2026-09-21 07:00 (brief) and 2026-09-27 09:00 (hygiene); systemd daemon active and will serve them through the normal run_due path. No model burn (no due window at install time).
+- Commit f686dcd. MISSION SCORE: 88/100 — P18 verified; live model-fired pack mission still unproven until the next due window.
