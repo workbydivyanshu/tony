@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib import boulder, catalog, config, mcp, memory as mem_mod, roles, score as score_mod, tiers, watch  # noqa: E402
 
-VERSION = "0.1.0-p1"
+VERSION = "0.4.0-p18"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
 
 
@@ -287,6 +287,13 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     from lib import engine as eng
     from lib import plangate as gate_mod
     from lib import report as rep
+    from lib import packs as packs_mod
+    # P18: direct missions can carry @pack refs too — the architect sees the
+    # full payload, schedule.json-style pointers never reach the model.
+    if packs_mod.has_pack_ref(mission):
+        expanded = packs_mod.expand(mission)
+        if expanded.strip():
+            mission = expanded
     models = catalog.live_catalog()
     overrides = config.get_roles() or None
     raw = tiers.assign_roles_with_sources(models, overrides)
@@ -534,6 +541,50 @@ def cmd_daemon(inbox: str | None, interval: int = 10, once: bool = False,
     return 0
 
 
+def cmd_packs(name: str | None = None) -> int:
+    """--packs lists ~/.tony/packs/*.md; --pack NAME prints one body."""
+    from lib import packs as packs_mod
+    if name:
+        body = packs_mod.read_pack(name)
+        if not body:
+            print(f"tony: no readable pack '{name}' (~/.tony/packs/{name}.md)",
+                  file=sys.stderr)
+            return 2
+        print(body)
+        return 0
+    found = packs_mod.list_packs()
+    if not found:
+        print("no packs in ~/.tony/packs (drop *.md files there; "
+              "reference with @pack:<name>)")
+        return 0
+    for n in found:
+        body = packs_mod.read_pack(n)
+        print(f"{n}  ({len(body)} chars)")
+
+
+def cmd_install_defaults() -> int:
+    """--install-defaults: seed builtin packs + Hermes-gap cron jobs (idempotent)."""
+    import datetime as _dt
+    from lib import packs as packs_mod
+    res = packs_mod.ensure_defaults(None)
+    if res["packs"]:
+        print("tony: packs seeded: " + ", ".join(res["packs"]))
+    if res["jobs"]:
+        print("tony: schedules added: " + ", ".join(res["jobs"]))
+    if not res["packs"] and not res["jobs"]:
+        print("tony: defaults already installed (existing packs/jobs untouched)")
+    from lib import sched as sched_mod
+    for j in sched_mod.load(None):
+        if j.get("name") in ("morning-briefing", "memory-hygiene"):
+            try:
+                nxt = sched_mod.next_run(j["cron"], _dt.datetime.now())
+                when = nxt.strftime("%Y-%m-%d %H:%M")
+            except ValueError:
+                when = "never (impossible cron)"
+            print(f"tony: {j['name']} [{j['cron']}] -> next {when}")
+    return 0
+
+
 def main(argv=None) -> int:
     argv = argv or sys.argv[1:]
     p = argparse.ArgumentParser(prog="tony", description="free-model-native agent CLI")
@@ -542,6 +593,9 @@ def main(argv=None) -> int:
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + mcp + boulders")
     p.add_argument("--mcp-status", action="store_true", help="list MCP servers delegates inherit via opencode")
     p.add_argument("--skills", action="store_true", help="list discovered skills from ~/.tony/skills")
+    p.add_argument("--packs", action="store_true", help="list domain packs from ~/.tony/packs")
+    p.add_argument("--pack", metavar="NAME", default=None, help="print one domain pack body (referenced in missions as @pack:NAME)")
+    p.add_argument("--install-defaults", action="store_true", help="seed builtin packs + morning-brief/memory-hygiene schedules (idempotent)")
     p.add_argument("--research", metavar="TOPIC", default=None, help="deep-research fan-out: 3 parallel explorers (websearch MCP) -> cited synthesis -> critic gate")
     p.add_argument("--install-daemon", action="store_true", help="write + enable the systemd user unit (tony --daemon at login, no sudo)")
     p.add_argument("--remember", metavar="FACT", default=None, help="append one dated fact to ~/.tony/memory/MEMORY.md")
@@ -649,6 +703,10 @@ def main(argv=None) -> int:
         for s in found:
             print(f"{s['name']}  ({s['path']})")
         return 0
+    if args.install_defaults:
+        return cmd_install_defaults()
+    if args.packs or args.pack:
+        return cmd_packs(args.pack)
     if args.mcp_status:
         return cmd_mcp_status(args)
     if args.remember:

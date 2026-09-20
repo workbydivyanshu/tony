@@ -13,8 +13,8 @@ matches the current minute and the ledger shows it hasn't fired this minute.
 The daemon is not a catch-up service.
 
 run_due(home, mission_fn, now) executes the oldest due job via
-mission_fn(mission_text, "sched-<name>") and marks the ledger. Tests inject
-fakes + temp HOME — no model burn at the seam.
+mission_fn(expand(@pack refs in mission_text), "sched-<name>") and marks the
+ledger. Tests inject fakes + temp HOME — no model burn at the seam.
 """
 import datetime as _dt
 import json as _json
@@ -244,8 +244,16 @@ def run_due(home: str | None, mission_fn, now: _dt.datetime | None = None) -> di
     if not due:
         return None
     job = due[0]
+    # P18: @pack:<name> references resolve HERE, before the mission fn, so a
+    # scheduled job carries a short pointer in schedule.json but the model
+    # sees the full (editable, 8KB-capped) pack payload.
+    from . import packs as _packs
     try:
-        report = mission_fn(job["mission"], "sched-" + job["name"])
+        mission_text = _packs.expand(job["mission"], home)
+    except Exception:
+        mission_text = job["mission"]
+    try:
+        report = mission_fn(mission_text, "sched-" + job["name"])
         status = "ok"
     except Exception as e:  # one job's blowup never kills the daemon
         report = f"scheduled mission failed: {e}"
