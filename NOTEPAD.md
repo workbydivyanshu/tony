@@ -428,3 +428,8 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - Built lib/sched.py (cron */,-steps, dow/month names, dom/dow OR, next_run, schedule.json + minute-ledger, missed windows skipped) + daemon reap_stale_claims(30min) + run_once schedule hook + --add/--list/--rm-schedule flags.
 - Tests: 12 new test_sched.py (Feb30-never, */15, dow names, fake-clock due-scan) + 3 in test_daemon.py (stale-reap, fresh-untouched, run_once-fires-due). Suite 180/180, keyless grep clean.
 - P14 verified present (unit enabled+active, no rebuild). Live: p11proof added 2min out, daemon fired sched-p11proof at 23:12 via stub (zero model burn), ledger-guarded second pass None, schedule removed.
+
+## P17 follow-up — demote-budget fix (2026-09-20, VISION)
+- Demote retry now capped by role_timeout(role, timeout) like the primary (was raw timeout — stall could escape the budget on fallback).
+- test_demote_applies_budget pins [240,240] + BLOCKED; stale [5,20]/3x docstring fixed to P17 contract.
+- GREEN: 187/187 (186 + 1), py_compile ok, keyless 0 in lib/tony. No live burn (seam proof).
