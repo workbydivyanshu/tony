@@ -63,9 +63,15 @@ def test_turn_page_clicks_toolbar_next():
 
 
 def test_scan_loops_pages_and_hits_keyword():
-    """3 scripted pages, keyword on page 3: 2 turns, 2 settles, 1 hit."""
-    pages = [("page one Digest", True), ("page two Digest", True),
-             ("page three INTERVIEW invite", False)]
+    """3 scripted pages, keyword in a page-3 ROW: 2 turns, 2 settles, 1 hit.
+
+    Rows are Star-conversation-delimited (row protocol); chrome text
+    without markers scans as zero rows — never a hit (P30 chrome-noise
+    lesson: whole-page scan false-hit 12/12 live)."""
+    pages = [("Star conversation\nSWE List\n66 New Internships\nSep 18", True),
+             ("Star conversation\nSWE List\n73 New Internships\nSep 19", True),
+             ("Star conversation\nAcme Jobs\nINTERVIEW invite Tuesday\nSep 20",
+              False)]
     ev = _ev_script(pages)
     settled = []
     res = kimi.scan_inbox_pages("s1", ev, ("interview",), max_pages=12,
@@ -75,7 +81,17 @@ def test_scan_loops_pages_and_hits_keyword():
     assert len(res["hits"]) == 1, res
     assert res["hits"][0]["page"] == 3, res
     assert "INTERVIEW" in res["hits"][0]["subject"], res
+    assert res["hits"][0]["sender"] == "Acme Jobs", res
     assert len(settled) == 2, settled  # settle after each turn, not after last
+
+
+def test_scan_chrome_without_markers_never_hits():
+    """Marker-less page text (nav chrome) yields zero rows, zero hits."""
+    ev = _ev_script([("Navigation\nInbox\nDrafts\nMore\n", False)])
+    res = kimi.scan_inbox_pages("s1", ev, ("interview", "offer", "more"),
+                                max_pages=12)
+    assert res["subjects"] == 0, res
+    assert res["hits"] == [], res
 
 
 def test_parse_rows_splits_sender_subject():

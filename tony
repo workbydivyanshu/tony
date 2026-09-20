@@ -132,6 +132,12 @@ def cmd_bridge_start(_args) -> int:
     return res.returncode
 
 
+def cmd_inbox_scan(_args) -> int:
+    """--inbox-scan: deterministic Proton reply check, zero model calls."""
+    from lib import inboxscan as _scan
+    return _scan.run_scan()
+
+
 def cmd_doctor() -> int:
     results = doctor.run_all(bridge_path=os.path.expanduser("~/.kimi-webbridge/bin/kimi-webbridge"))
     counts = {"ok": 0, "warn": 0, "fail": 0, "skip": 0}
@@ -699,6 +705,7 @@ def main(argv=None) -> int:
     p.add_argument("--status", action="store_true", help="JSON: catalog + tiers + roles + mcp + boulders")
     p.add_argument("--mcp-status", action="store_true", help="list MCP servers delegates inherit via opencode")
     p.add_argument("--bridge-start", action="store_true", help="explicit opt-in start of the Kimi daemon; never implicit")
+    p.add_argument("--inbox-scan", action="store_true", help="deterministic Proton reply check (bridge pages, zero model calls)")
     p.add_argument("--skills", action="store_true", help="list discovered skills from ~/.tony/skills")
     p.add_argument("--packs", action="store_true", help="list domain packs from ~/.tony/packs")
     p.add_argument("--pack", metavar="NAME", default=None, help="print one domain pack body (referenced in missions as @pack:NAME)")
@@ -824,6 +831,8 @@ def main(argv=None) -> int:
         return cmd_mcp_status(args)
     if args.bridge_start:
         return cmd_bridge_start(args)
+    if args.inbox_scan:
+        return cmd_inbox_scan(args)
     if args.remember:
         return cmd_remember(args.remember)
     if args.recall is not None:

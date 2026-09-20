@@ -610,6 +610,14 @@ PASS=0 FAIL=1
 - SURFACE GATES: --selftest 4/4; --doctor HEALTHY 10/10; --models 7 live.
 - MISSION SCORE: 92/100 (Hermes' daily check now exists as callable lib + proven live end-to-end; remaining: scheduler wiring for daily runs — needs her call on timing).
 
+## P31 — daily reply-check command + schedule (2026-09-20, autonomy — Hermes mornings)
+- lib/inboxscan.py (new): run_scan() deterministic — navigate-first (live found the 502: scan assumed a tab), scan pages, write dated report to ~/.fleet/out, notify-send on hits ONLY (quiet/infra stay silent, Hermes rule), exit 0/1. 'oa' excluded with evidence. tony --inbox-scan thin pass-through.
+- scan_inbox_pages migrated to row-scoped scanning (live chrome-noise lesson); S4 fixtures migrated to row protocol + new chrome-never-hits pin (P17 precedent: deliberate contract change, intent preserved).
+- Schedule: inbox-reply-check 30 7 * * * installed live (fires 2026-09-21 07:30, after briefing). Inline mission (no packs.py change — builtin would break the frozen P18 2-pack pin; tradeoff noted, graduate if doctrine grows). schedule.json is user-data, untracked.
+- RED: import-RED then navigate-missing 502 live. GREEN: 281/281 (274 prior + 7 new). ruff 0, mypy 0 (28 files), keyless 0, diff-check clean.
+- SURFACE LIVE: --inbox-scan exit 0, 12 pages / 575 rows / 1 noise hit (Glassdoor digest, correctly non-invite); --selftest 4/4; --doctor HEALTHY 10/10; --models live; --list-schedule shows the job. Zero model burn end-to-end.
+- MISSION SCORE: 93/100 (Hermes' mornings now run themselves: scan + notify + schedule; remaining Hermes deltas: delivery lane (needs her token), LinkedIn (hibernating), research depth (structural)).
+
 ## P29 — waveguard destructive moves (2026-09-20, autonomy)
 - Deliberate probe #2 (18 candidates as strings, never executed): 9 true slips pinned — mv /*, mv-to-/dev/null ($HOME/~/work forms), find -delete (incl /-rooted), ln to dotfile/devnull, redirect into home dotfiles ($HOME/${HOME} forms included). Documented OUT (not pinned, not hardened): cp/tar/zip/cat reads (exfil = sandbox problem), chmod/chown non-root (recoverable via git), obfuscated interpreter payloads (regex-uncatchable without theater), plain mv renames (harmless).
 - Assessed-not-changed (honest no-op): H2 wrapper-routing — frozen spec's zero-arg fakes forbid routing wrappers through post(); wrappers are parse-helpers, post() is the driver (H1 proof already drives post() directly). Queued notes that died on contact with the spec stay dead.

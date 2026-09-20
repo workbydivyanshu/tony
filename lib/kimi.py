@@ -170,11 +170,14 @@ def scan_inbox_pages(session: str, ev=None, keywords=(), max_pages: int = 12,
     while pages < max_pages:
         page = read_inbox_page(session, ev)
         pages += 1
-        subjects += 1
+        # P30 chrome-noise lesson: scan parsed ROWS, never whole-page text
+        # (nav chrome false-hit 12/12 live). Marker-less pages = zero rows.
+        rows = parse_inbox_rows(page["text"])
+        subjects += len(rows)
         if kw:
-            for h in scan_subjects([{"subject": page["text"], "sender": ""}],
-                                   list(kw)):
-                hits.append({"page": pages, "subject": h["subject"][:200]})
+            for h in scan_subjects(rows, list(kw)):
+                hits.append({"page": pages, "sender": h.get("sender", "?"),
+                             "subject": h.get("subject", "")[:200]})
         if not page["has_next"]:
             break
         if not turn_inbox_page(session, ev):
