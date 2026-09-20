@@ -470,3 +470,9 @@ PROCESS LESSON (re-learned): foreground live missions in a tool call die at the 
 - Model-authored waves (test -f/-s/grep pipes) all cleared waveguard — zero false positives.
 - HONEST finding queued as P22: ISSUES → builder fix FAILED → wave still ran (pre-existing yes-mode contract), log chain shows hold→fail→execute without an explicit override line. Wave-after-failed-fix must log the bypass explicitly.
 - Boulder: ~/.fleet/boulder/tony-p21-livefire.md (all green). MISSION SCORE: 88/100.
+
+
+## P22 — critic-override contract (2026-09-20, autonomy)
+- From P21 live-fire finding: ISSUES -> builder fix FAILED -> wave ran with no explicit override line in the chain.
+- apply_critic_gate now returns (gate, fix_status): none|ok|fail|held. Failed fix (return "fail"/False or raise) writes "ISSUES OVERRIDE — builder fix failed; wave results are UNVERIFIED-until-they-pass" to the boulder; cmd_mission also prints it pre-wave where a human sees it.
+- RED 3 failing first (tuple unpack + missing OVERRIDE), GREEN 221/221 (217+4). Gate pins migrated deliberately. ruff+mypy clean, keyless 0. Commit c18799e. MISSION SCORE: 92/100.
