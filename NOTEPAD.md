@@ -496,3 +496,18 @@ PASS=0 FAIL=1
 - GREEN: 231/231 (221 prior unmodified + 10 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals.
 - SURFACE LIVE: --doctor HEALTHY 9/9 exit 0 (8 models, 2 sched jobs, daemon active, 5 MCP); --selftest 4/4; --models 8 live. Zero model burn.
 - MISSION SCORE: 90/100 (self-diagnosing now; remaining ceiling is live failure-path proof, which must never be forced on the real home).
+
+## P24 — wave cwd follows mission workdir (2026-09-20, autonomy)
+- Recon (T1 delegate, verified): run_wave/verify_wave default cwd="/tmp" (engine.py:78,292); cmd_mission (tony:382) + cmd_resume (tony:427) compute workdir (tony:327,414) but never pass it — relative wave items execute in /tmp and fail spuriously. selftest tony:644 excluded (synthetic boulder, /tmp intentional). No research wave site.
+- RED captured:
+```
+PASS=2 FAIL=1
+  FAIL test_wave_cwd:test_s3_entrypoints_pass_cwd AssertionError: cmd_mission must pass cwd=workdir into verify_wave (tony:382)
+```
+- Full suite with spec: PASS=233 FAIL=1 (231 prior green; S1 passes documenting correct explicit-cwd behavior, S2 wave fails as predicted proving cwd load-bearing, S3 pins the entrypoint bug).
+
+## P24 GREEN — wave cwd follows workdir (2026-09-20, autonomy)
+- T3: cwd=workdir threaded at tony:382 (mission) + tony:427 (resume); selftest tony:644 keeps /tmp with exclusion comment; VERSION 0.4.0-p24 in tony + pyproject (was p18/p19 drift).
+- GREEN: 234/234 (231 prior unmodified + 3 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals.
+- SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 9/9; --models 8 live; --version 0.4.0-p24. Zero model burn.
+- MISSION SCORE: 92/100 (spurious relative-wave failures eliminated at both entrypoints; P25 candidate queued: double-daemon claim race).

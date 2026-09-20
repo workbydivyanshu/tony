@@ -1,6 +1,6 @@
 [project]
 name = "tony-agent"
-version = "0.4.0-p19"
+version = "0.4.0-p24"
 description = "Tony — free-model-native agent CLI (stdlib-only orchestrator over `opencode run`)"
 readme = "README.md"
 requires-python = ">=3.10"

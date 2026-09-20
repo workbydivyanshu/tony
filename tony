@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib import boulder, catalog, config, doctor, mcp, memory as mem_mod, roles, score as score_mod, tiers, watch  # noqa: E402
 
-VERSION = "0.4.0-p18"
+VERSION = "0.4.0-p24"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
 TONY_DIR_ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -379,7 +379,7 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
         print("tony: critic gate ISSUES OVERRIDE — builder fix failed; "
               "wave results are UNVERIFIED-until-they-pass")
 
-    eng.verify_wave(b, max_verify=max_verify, fix_fn=_builder_fix) if eng.should_run_wave(b, keep_going) else boulder.log(b, "wave skipped (BLOCKED TODOs; use --keep-going to run anyway)")
+    eng.verify_wave(b, max_verify=max_verify, cwd=workdir, fix_fn=_builder_fix) if eng.should_run_wave(b, keep_going) else boulder.log(b, "wave skipped (BLOCKED TODOs; use --keep-going to run anyway)")
     p = boulder.save(slug, b)
     score = cmd_score(b, gate, evidence)
     rp = rep.write(os.path.expanduser("~/.fleet/out"), slug, mission,
@@ -424,7 +424,7 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
     eng.run_loop(b, tier_models, workdir, parallel=parallel,
                  sleep_fn=time.sleep, timeout=timeout)
     if eng.should_run_wave(b, keep_going):
-        eng.verify_wave(b, max_verify=max_verify, fix_fn=_builder_fix)
+        eng.verify_wave(b, max_verify=max_verify, cwd=workdir, fix_fn=_builder_fix)
     else:
         boulder.log(b, "wave skipped (BLOCKED TODOs; use --keep-going to run anyway)")
     p = boulder.save(slug, b)
@@ -641,6 +641,7 @@ def selftest_checks() -> list[tuple[str, bool, str]]:
         from lib import boulder, engine
         b = boulder.new("selftest-waveguard")
         boulder.add_wave(b, "F1. sudo rm -rf /tmp/tony-selftest-never")
+        # P24: cwd=/tmp intentional — synthetic boulder, no mission workdir exists.
         res = engine.run_wave(b, cwd="/tmp")
         ok = res == [False] and any("BLOCKED by waveguard" in ln for ln in b["log"])
         results.append(("waveguard", bool(ok), "hostile wave blocked" if ok else "NOT blocked"))
