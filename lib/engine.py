@@ -374,21 +374,39 @@ def evidence_coverage(output: str, todos: list) -> float:
 
 
 def apply_critic_gate(b: dict, gate: str, keep_going: bool = False,
-                      fix_fn=None, critic_output: str = "") -> str:
-    """Critic-gate decision after a critic call. Returns gate.
+                      fix_fn=None, critic_output: str = "") -> tuple:
+    """Critic-gate decision after a critic call. Returns (gate, fix_status).
 
-    PASS -> verdict logged, no fix. ISSUES -> hold logged + one bounded
-    fix_fn([critic_output]) call. ISSUES + keep_going -> override logged,
-    no fix. fix_fn=None never called (honest hold). fix_fn arrives as a
-    parameter, so the call-before-def ordering crash is structurally
-    impossible for callers."""
+    P22: fix_status is "none" (PASS / no fix needed), "ok" (fix_fn ran and
+    reported success), "fail" (fix_fn ran and reported failure/raised), or
+    "held" (ISSUES with fix needed but no fix ran: fix_fn=None, or
+    --keep-going bypass where the human owns the override).
+
+    P19 ISSUES semantics preserved: hold logged + one bounded fix_fn call;
+    ISSUES + keep_going -> override logged, no fix.
+    """
     from . import boulder as bmod
     bmod.log(b, f"critic gate: {gate}")
-    if gate == "ISSUES":
-        if keep_going:
-            bmod.log(b, "critic gate: ISSUES hold overridden by --keep-going")
-        else:
-            bmod.log(b, "critic gate: ISSUES; holding wave for builder fix")
-            if fix_fn is not None:
-                fix_fn([critic_output])
-    return gate
+    if gate != "ISSUES":
+        return (gate, "none")
+    if keep_going:
+        bmod.log(b, "critic gate: ISSUES hold overridden by --keep-going")
+        return (gate, "held")
+    bmod.log(b, "critic gate: ISSUES; holding wave for builder fix")
+    if fix_fn is None:
+        bmod.log(b, "critic gate: ISSUES; NO FIX available — wave OVERRIDE if run")
+        return (gate, "held")
+    try:
+        result = fix_fn([critic_output])
+        ok = (result != "fail") and result is not False
+    except Exception as e:
+        bmod.log(b, f"critic gate: builder fix FAILED ({type(e).__name__})")
+        ok = False
+    if ok:
+        bmod.log(b, "critic gate: builder fix ok")
+    else:
+        # P22: the wave may still run under --yes/headless, but the boulder
+        # must say so EXPLICITLY before any wave line lands.
+        bmod.log(b, "critic gate: ISSUES OVERRIDE — builder fix failed; "
+                    "wave results are UNVERIFIED-until-they-pass")
+    return (gate, "ok" if ok else "fail")
