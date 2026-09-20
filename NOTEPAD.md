@@ -511,3 +511,20 @@ PASS=2 FAIL=1
 - GREEN: 234/234 (231 prior unmodified + 3 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals.
 - SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 9/9; --models 8 live; --version 0.4.0-p24. Zero model burn.
 - MISSION SCORE: 92/100 (spurious relative-wave failures eliminated at both entrypoints; P25 candidate queued: double-daemon claim race).
+
+## P25 — daemon loser-yields on claim race (2026-09-20, autonomy)
+- Seam verified: run_once list_pending (daemon.py:118) -> claim(src) (:127) unguarded; lost race kills the daemon with FileNotFoundError (loop dies, systemd crash-loops, --daemon-once exits nonzero).
+- T1 delegate wrote the spec file then hung on one tool call (cancelled bg_5c9d2a5b, took over). Spec review found a REAL flaw: pre-claiming job.md->job.md.claimed makes list_pending skip it, so run_once noops vacuously and the spec passed 3/3 WITHOUT the guard. Fixed S1/S2 to inject the race synchronously (monkeypatch daemon.claim: peer removes src, then real claim raises) — the only faithful single-threaded simulation of the TOCTOU window. Pin comments kept deliberately (P4 precedent: they stop future "simplification" back to the vacuous version).
+- RED captured:
+```
+PASS=1 FAIL=2
+  FAIL test_claim_race:test_loop_survives_stolen_claim FileNotFoundError: ... job.md' -> '... job.md.claimed'
+  FAIL test_claim_race:test_loser_yields_none FileNotFoundError: ... job.md' -> '... job.md.claimed'
+```
+- Full suite with spec: PASS=235 FAIL=2 (234 prior green + S3 winner anchor green by design — anchors pass pre- and post-fix; S1/S2 pin the crash).
+
+## P25 GREEN — loser-yields guard (2026-09-20, autonomy)
+- T3: 4-line guard at daemon.py:127 (try claim / except FileNotFoundError -> None). Only FileNotFoundError caught — PermissionError stays loud. claim() contract unchanged; loop()/--daemon-once ride the existing None path (sleep+repoll, exit 0).
+- GREEN: 237/237 (234 prior unmodified + 3 new). ruff 0, mypy 0 (26 files), keyless 0, zero opencode/<id> literals, diff-check clean.
+- SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 9/9; --models 8 live; --version 0.4.0-p24. Zero model burn, no stray procs.
+- MISSION SCORE: 90/100 (double-daemon now degrades to yield+repoll instead of crash-loop; remaining ceiling is a live two-daemon proof, deliberately never forced).

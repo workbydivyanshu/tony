@@ -124,7 +124,10 @@ def run_once(inbox: str, mission_fn, home: str | None = None) -> dict | None:
             return None
     src = pending[0]
     stem = _stem(src)
-    claimed = claim(src)
+    try:
+        claimed = claim(src)
+    except FileNotFoundError:
+        return None  # P25: lost the claim race — peer holds the job; yield, don't crash
     try:
         with open(claimed) as f:
             text = f.read()
