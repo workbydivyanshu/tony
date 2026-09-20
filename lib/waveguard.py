@@ -33,6 +33,13 @@ _DENY = (
     # slipped the root-only pattern). Waves verify; they never prune trees.
     # Single-file rm -f (no r/R flag) stays allowed by construction.
     ("recursive rm (any target)", r"\brm\b[^|;&]*\s-[a-zA-Z]*[rR]"),
+    # P29: destructive moves. Waves verify; they never relocate/delete trees.
+    # Plain `mv old new` renames stay allowed by construction.
+    ("move to /dev/null", r"\bmv\b[^|;&]*\s/dev/null(?:\s|$)"),
+    ("move absolute glob", r"\bmv\b[^|;&]*/\*"),
+    ("find -delete", r"\bfind\b[^|;&]*-delete\b"),
+    ("symlink to dotfile/devnull", r"\bln\b[^|;&]*\s(?:/dev/null|~/\.)"),
+    ("redirect into home dotfile", r">\s*(?:~|\$HOME|\$\{HOME\})?/\."),
     ("device node write", r">\s*/dev/(?:sd|nvme|hd|vd|disk)"),
     ("initramfs/kernel image tamper", r"\b(?:dd|cp)\b[^|;&]*\b(?:/boot/|/lib/modules/)"),
     ("passwd/shadow write", r">\s*/etc/(?:passwd|shadow|sudoers)"),

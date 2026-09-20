@@ -601,6 +601,13 @@ PASS=0 FAIL=1
 - SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 10/10; --models live. Zero model burn.
 - Follow-ups (H2): route thin wrappers (navigate etc.) through post() so they actually drive; systemd unit for kimi daemon (needs her call); the live site proof re-run post-login.
 - H1 PROOF UPDATE (same night, Vianca logged into Proton): Target B GREEN — inbox readable (339 unread, 308 subject lines page 1), scan_subjects over legend keywords: 0 interview/offer hits, buildbear 0. Notables: LinkedIn hibernation notice Sep 16 (independently confirms hibernation), Proton Free downgrade Sep 18. Target A stays BLOCKED (hibernating account, confirmed twice). Raw dumps deleted after counting (counts + keyword JSON only in ~/.fleet/out/tony-h1-proof.json — inbox PII minimized). Zero opencode runs, zero write calls. Suite 266/266 re-verified (no code change).
+
+## P29 — waveguard destructive moves (2026-09-20, autonomy)
+- Deliberate probe #2 (18 candidates as strings, never executed): 9 true slips pinned — mv /*, mv-to-/dev/null ($HOME/~/work forms), find -delete (incl /-rooted), ln to dotfile/devnull, redirect into home dotfiles ($HOME/${HOME} forms included). Documented OUT (not pinned, not hardened): cp/tar/zip/cat reads (exfil = sandbox problem), chmod/chown non-root (recoverable via git), obfuscated interpreter payloads (regex-uncatchable without theater), plain mv renames (harmless).
+- Assessed-not-changed (honest no-op): H2 wrapper-routing — frozen spec's zero-arg fakes forbid routing wrappers through post(); wrappers are parse-helpers, post() is the driver (H1 proof already drives post() directly). Queued notes that died on contact with the spec stay dead.
+- RED: hostile ALLOWED (`mv /* /tmp/x`), benign green. GREEN: 268/268 (266 prior unmodified + 2 new). ruff 0, mypy 0 (27 files), keyless 0, diff-check clean.
+- SURFACE LIVE: --selftest 4/4; --doctor HEALTHY 10/10; --models 7 live. Zero model burn.
+- MISSION SCORE: 90/100 (deny-list now covers moves + pipes + recursive rm with precision anchors; residual is exfil/obfuscation — sandbox territory, declared).
 - MISSION SCORE: 88/100 (lane + lifecycle + doctor shipped, mechanism proven live; site proofs honestly BLOCKED on her logins — the boundary the safety law predicted).
 
 ## v0.4 PUSHED (2026-09-20, autonomy — Vianca: "Push v0.4" then "Public tony repo")
