@@ -618,6 +618,11 @@ PASS=0 FAIL=1
 - SURFACE LIVE: --inbox-scan exit 0, 12 pages / 575 rows / 1 noise hit (Glassdoor digest, correctly non-invite); --selftest 4/4; --doctor HEALTHY 10/10; --models live; --list-schedule shows the job. Zero model burn end-to-end.
 - MISSION SCORE: 93/100 (Hermes' mornings now run themselves: scan + notify + schedule; remaining Hermes deltas: delivery lane (needs her token), LinkedIn (hibernating), research depth (structural)).
 
+## P32 — surface-docs parity (2026-09-20, autonomy)
+- README Surface table lacked the two H1/P31 flags (--bridge-start, --inbox-scan); --help rendered both correctly. Added 2 rows, nothing else.
+- GREEN: 281/281 (suite untouched, docs-only). --help live-verified.
+- MISSION SCORE: 85/100 (hygiene slice; value is promises-vs-reality contract, not capability).
+
 ## P29 — waveguard destructive moves (2026-09-20, autonomy)
 - Deliberate probe #2 (18 candidates as strings, never executed): 9 true slips pinned — mv /*, mv-to-/dev/null ($HOME/~/work forms), find -delete (incl /-rooted), ln to dotfile/devnull, redirect into home dotfiles ($HOME/${HOME} forms included). Documented OUT (not pinned, not hardened): cp/tar/zip/cat reads (exfil = sandbox problem), chmod/chown non-root (recoverable via git), obfuscated interpreter payloads (regex-uncatchable without theater), plain mv renames (harmless).
 - Assessed-not-changed (honest no-op): H2 wrapper-routing — frozen spec's zero-arg fakes forbid routing wrappers through post(); wrappers are parse-helpers, post() is the driver (H1 proof already drives post() directly). Queued notes that died on contact with the spec stay dead.

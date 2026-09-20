@@ -53,6 +53,8 @@ is hardcoded.
 | Skills | `--skills` (keyword-matched `.md` doctrine injected into the architect) |
 | Chat | `--chat [SESSION]` |
 | Doctor | `--doctor` (self-diagnose: binary, catalog, roles, config, daemon, schedules, paths, MCP) |
+| Bridge | `--bridge-start` (explicit opt-in start of the Kimi daemon; never implicit) |
+| Inbox scan | `--inbox-scan` (deterministic Proton reply check, zero model calls; scheduled 07:30 daily) |
 
 Everything lives under `~/.tony/` (boulders, memory, packs, schedule,
 inbox, work dirs, runs.log). Reports land in `~/.fleet/out/`.
