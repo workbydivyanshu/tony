@@ -662,3 +662,9 @@ PASS=0 FAIL=1
   never tags. Why: off-device copies are the restore path (02:40 proved
   local-only work can vanish). AGENTS.md carries the enforceable version.
 - First push under this law: work/night-2026-09-21 (H1+P29-P32+T1, 9 commits).
+
+## P36 — sched done-report (2026-09-21)
+- Dawn-proven gap: sched branch returned bare dict (ledger mark only, zero trace). Now mirrors inbox artifacts: done-file + notify on non-None res; None writes nothing.
+- T1 delegate vanished pre-write (record expired); executed direct. RED: 3 missing-artifact FAILs + None anchor.
+- GREEN: 288/288 (284 + 4). ruff 0, mypy 0 (28 files), keyless 0. --selftest 4/4, doctor 10/10.
+- MISSION SCORE: 88/100 (silent failures now leave traces; live dawn proof pending next window).

@@ -119,9 +119,26 @@ def run_once(inbox: str, mission_fn, home: str | None = None) -> dict | None:
     if not pending:
         from lib import sched as _sched
         try:
-            return _sched.run_due(home, mission_fn)
+            res = _sched.run_due(home, mission_fn)
         except Exception:
             return None
+        if res is None:
+            return None
+        # P36: scheduled completions leave the same trace as inbox
+        # missions (done-file + notify) — a failing dawn mission must
+        # never vanish with only a ledger mark.
+        name, status = res.get("name", "sched-?"), res.get("status", "?")
+        ddir = done_dir(home)
+        srpath: str | None = None
+        try:
+            os.makedirs(ddir, exist_ok=True)
+            srpath = os.path.join(ddir, name + ".done.md")
+            with open(srpath, "w") as f:
+                f.write(f"# {name} — {status}\n\n{res.get('report', '')}\n")
+        except OSError:
+            srpath = None
+        notify(f"tony: {name}", f"mission {status} — report: {srpath}")
+        return res
     src = pending[0]
     stem = _stem(src)
     try:
