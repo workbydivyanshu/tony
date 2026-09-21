@@ -27,9 +27,13 @@ def test_role_call(tmpdir="/tmp/tony-test-eng"):
     shutil.rmtree(tmpdir, ignore_errors=True)
     os.makedirs(tmpdir, exist_ok=True)
     res = engine.role_call("builder", "opencode/big-pickle", "do X",
-                           workdir=tmpdir, runner=fake_ok)
+                           workdir=tmpdir, runner=fake_ok,
+                           runslog=os.path.join(tmpdir, "runs.log"))
     assert res["status"] == "ok" and "DID THE THING" in res["output"], res
     assert os.path.exists(res["outfile"]), res
+    # P33: hermetic ledger — the row must land in tmpdir, never ~/.tony.
+    rows = open(os.path.join(tmpdir, "runs.log")).read().strip().splitlines()
+    assert len(rows) == 1 and "big-pickle" in rows[0] and "ok" in rows[0], rows
 
 def test_loop_demote_then_ok(tmpdir="/tmp/tony-test-eng2"):
     import shutil
