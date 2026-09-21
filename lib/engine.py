@@ -258,16 +258,28 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
             bmod.log(b, f"TODO {i+1} BLOCKED (no fallback)")
 
 
+_MISSION_FN_SENTINEL = object()
+
+
 def run_loop(b: dict, tier_models: dict, workdir: str,
              runner=None, runslog: str = RUNSLOG_DEFAULT,
-             parallel: bool = False, sleep_fn=None, timeout: int = 600) -> dict:
+             parallel: bool = False, sleep_fn=None, timeout: int = 600,
+             mission_fn=_MISSION_FN_SENTINEL) -> dict:
     """Execute each unchecked TODO; demote+retry once. parallel=True runs
     consecutive [role:explorer] TODOs concurrently via threads (stdlib only);
     every other role stays sequential in index order.
     Batch scan uses resolve_role(todo) pure (no log); _exec_one re-resolves with
-    b and records the unknown-tag fallback exactly once (review note 1)."""
+    b and records the unknown-tag fallback exactly once (review note 1).
+    When mission_fn is provided, it is called as mission_fn(text, slug)
+    for each unchecked TODO instead of role_call; mission_fn=None marks
+    the TODO as BLOCKED."""
     import concurrent.futures as cf
+    import re as _re
     batch: list = []
+
+    def _mission_slug(text: str) -> str:
+        m = _re.search(r"\[mission:([A-Za-z0-9][A-Za-z0-9_-]*)\]", text or "")
+        return m.group(1) if m else ""
 
     def flush():
         if not batch:
@@ -275,11 +287,34 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
         with cf.ThreadPoolExecutor(max_workers=len(batch)) as ex:
             list(ex.map(lambda j: _exec_one(b, j, tier_models, workdir, runner, runslog,
                                         sleep_fn, timeout),
-                        batch))
+                            batch))
         batch.clear()
 
     for i, todo in enumerate(b["todos"]):
         if todo["box"]:
+            continue
+        if mission_fn is not _MISSION_FN_SENTINEL:
+            from . import boulder as bmod
+            from lib import fold as _fold
+            if mission_fn is None:
+                todo["text"] += " [BLOCKED]"
+                bmod.log(b, "mission dispatch disabled (mission_fn=None)")
+            else:
+                slug = _mission_slug(todo["text"])
+                try:
+                    result = mission_fn(todo["text"], slug)
+                except Exception as e:
+                    todo["text"] += f" [BLOCKED: mission {slug} raised {type(e).__name__}]"
+                    bmod.log(b, f"mission {slug}: exception {e}")
+                    continue
+                score = result[0] if isinstance(result, tuple) else 0
+                wave_ok = result[1] is True if isinstance(result, tuple) else False
+                if wave_ok and score >= _fold.DONE_THRESHOLD:
+                    todo["box"] = True
+                    bmod.log(b, f"mission {slug}: score {score}, evidence folded")
+                else:
+                    todo["text"] += f" [BLOCKED: mission {slug} scored {score}]"
+                    bmod.log(b, f"mission {slug}: score {score}, held")
             continue
         if parallel and resolve_role(todo) in PARALLEL_ROLES:
             batch.append(i)

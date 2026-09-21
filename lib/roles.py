@@ -11,12 +11,14 @@ Prefix EVERY TODO line with a role tag [role:<name>] choosing from:
 builder (default — code changes, file writes, sequential), explorer (read-only
 recon: find/show/describe, NEVER writes — these run concurrently via threads),
 researcher (external docs/synthesis, sequential). When in doubt use builder.
+For separable sub-deliverables, attach a [mission:<slug>] tag (kebab-case,
+≤2 per boulder) to spawn a child boulder under that slug.
 Emit the boulder markdown EXACTLY in this shape and nothing else:
 
 # Boulder: <short slug-friendly title>
 ## TODOs
-- [ ] 1. <concrete step one>
-- [ ] 2. <concrete step two>
+- [ ] 1. <concrete step one> [role:<name>] [mission:<slug>]
+- [ ] 2. <concrete step two> [role:<name>]
 ## Final Verification Wave
 - [ ] F1. <shell command>
 ## Progress Log
@@ -51,7 +53,11 @@ You MUST end your response with EXACTLY ONE of these lines (no other verdict for
 After the verdict line, list per-TODO evidence with lines like:
   EVIDENCE: TODO 1 <details>
   EVIDENCE: TODO 2 <details>
-One line per TODO index. Do not omit evidence lines."""
+One line per TODO index. Do not omit evidence lines.
+
+Child boulder lines (from [mission:<slug>] TODOs) must appear as:
+  CHILD: <slug> <status> — <one-line summary>
+Up to 2 child lines; truncate each to TRUNCATE_LEN chars."""
 
 
 def critic_prompt(boulder_markdown: str) -> str:
@@ -60,10 +66,10 @@ def critic_prompt(boulder_markdown: str) -> str:
 
 
 def architect_prompt(mission: str, mcp_servers: list | None = None,
-                     memory_lines: list | None = None,
-                     matched_skills: list | None = None,
-                     recon_lines: list | None = None,
-                     workdir: str | None = None) -> str:
+                      memory_lines: list | None = None,
+                      matched_skills: list | None = None,
+                      recon_lines: list | None = None,
+                      workdir: str | None = None) -> str:
     # Enforcement boundary: prompts + plan gate. Sandboxing opencode out of scope.
     base = f"{ARCHITECT_SYSTEM}\nMISSION:\n{mission}\n"
     if workdir is not None:
@@ -84,3 +90,4 @@ def architect_prompt(mission: str, mcp_servers: list | None = None,
                  + "\n".join(recon_lines) + "\n")
     from . import skills as skills_mod
     return skills_mod.inject_prompt(base, matched_skills or [])
+

@@ -715,3 +715,11 @@ PASS=0 FAIL=1
   agents, or anything needing new model capability (free-tier ceiling stands).
 - Execution deliberately NOT tonight: infra flaky (tool interruptions,
   throttled tier, dead launcher), acceptance needed first. Plan-only.
+
+## P38 — nested supervised sub-missions (OMO rung, 2026-09-21)
+- Wave 1 delegates (T0/T1/T2) delivered then hung; records expired before collection — verified on disk instead. T1 spec coherent as-written. T2 spec needed SURGERY before GREEN: contradicted the plan (75/40 3-way fold vs D4 60-rule), pinned junk (architect_prompt.fold_threshold attr, invented engine.re_dispatch API). Rewrote evidence pins to plan contract; split engine-dependent pins (None-hold, resume x2) into tests/test_mission_dispatch.py.
+- T3/T4 delegates also hung post-delivery; took over: folded lib/fold.py to 60-rule, single-arg tuple resolve_tag, removed roles.py re_dispatch monkey-patch + wrapper (import-time cross-module mutation — never again), restored daemon docstring, added exception containment + threshold fold + evidence logs to engine dispatch.
+- Caught my own spec bug live: resume tests contradicted each other (same fake, flip vs no-flip) — fixed redispatch fake to (30, False).
+- GREEN: 334/334 (311 + 9 + 14). ruff 0, mypy 0 (32 files), keyless 0, diff-check clean.
+- SURFACE: --selftest 4/4; --doctor HEALTHY 10/10. Zero model burn (ledger untouched by suite).
+- MISSION SCORE: 90/100 (sub-missions dispatch/fold/supervise; live child-loop proof queued for healthy tier).

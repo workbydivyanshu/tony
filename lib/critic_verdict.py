@@ -8,7 +8,18 @@ transcript). Therefore parse() takes the FIRST explicit verdict hit, and
 callers treat None as ISSUES — an unclear verdict is never a pass."""
 import re
 
+TRUNCATE_LEN = 80
+
 _LINE = re.compile(r"verdict\s*:\s*([^\n]+)", re.I)
+
+
+def child_render(content: str, max_len: int = TRUNCATE_LEN) -> str:
+    """Render child evidence lines with truncation.
+
+    Prefixes with CHILD and truncates to max_len characters."""
+    prefix = "CHILD: "
+    truncated = content[: max_len - len(prefix)]
+    return prefix + truncated
 
 
 def parse(output: str) -> str | None:

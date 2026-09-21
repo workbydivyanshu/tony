@@ -104,13 +104,19 @@ def _stem(path: str) -> str:
     return base[:-3] if base.endswith(".md") else base
 
 
+MISSION_FN_NONE_DISABLED = True
+
+
 def run_once(inbox: str, mission_fn, home: str | None = None) -> dict | None:
     """Execute the oldest pending mission. Empty inbox -> None (noop).
 
     Each pass first reaps stale claims (killed-daemon orphans older than the
     TTL become visible again), then serves inbox missions, then due cron
     schedules (ledger-guarded, missed windows skipped, never backfilled).
-    """
+
+    A None mission_fn disables the path with an honest BLOCKED record."""
+    if mission_fn is None:
+        return {"name": "", "status": "BLOCKED", "report_path": None}
     try:
         reap_stale_claims(inbox)
     except Exception:
