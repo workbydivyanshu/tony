@@ -662,3 +662,9 @@ PASS=0 FAIL=1
   never tags. Why: off-device copies are the restore path (02:40 proved
   local-only work can vanish). AGENTS.md carries the enforceable version.
 - First push under this law: work/night-2026-09-21 (H1+P29-P32+T1, 9 commits).
+
+## P38 nested sub-missions (2026-09-21, ultrawork — plan ses_f3b7c6644ffe9xwYUONevVhgng)
+- Scope: [mission:<slug>] TODOs spawn bounded child dispatch: depth cap 2, max 3 children/parent, child budget parent_timeout//2 floor 60s, parent flips done iff child score>=60 AND wave green else honest BLOCKED; mission tags never join explorer thread batches; architect doctrine in ARCHITECT_SYSTEM; boulder.py/score.py/waveguard.py untouched.
+- RED: 12 pins (8 lib.submission units ModuleNotFoundError + 3 engine TypeError on depth kwarg + 1 roles AssertionError on doctrine). GREEN: 296/296 (284 prior unmodified + 12 new). ruff 0, mypy 0 (29 files), keyless 0, no new opencode/<id> literals.
+- SURFACE LIVE: --help OK; --models 7 live; --selftest/--doctor unaffected. Zero model burn (injected mission_fn fakes + echo/false only).
+- MISSION SCORE: 90/100 (OMO rung mechanism shipped: nested supervised sub-missions with depth/budget/children guards; residual is live-model child loops — her acceptance gates real runs).

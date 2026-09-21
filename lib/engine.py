@@ -210,17 +210,66 @@ def role_call(role: str, model: str, subtask: str, workdir: str,
             "outfile": outfile, "duration": dur, "model": model}
 
 
+_MISSION_TAG_RE = re.compile(r"\[mission:([^\]]+)\]")
+
+
 def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
               runner=None, runslog: str = RUNSLOG_DEFAULT,
-              sleep_fn=None, timeout: int = 600) -> None:
+              sleep_fn=None, timeout: int = 600,
+              *, depth: int = 0, mission_fn=None, max_children: int = 3) -> None:
     """Execute a single TODO by index: role_call -> flip+log; demote once, else [BLOCKED].
+
+    Mission-tag dispatch: if the TODO carries a [mission:slug] tag, dispatch via
+    mission_fn instead of role_call. Depth and children guards apply.
 
     Exception guard (review note 5): a filesystem blowup (workdir removed mid-run,
     listdir raising inside the lock) marks THIS TODO [BLOCKED] instead of aborting
     the mission via flush() — sequential and parallel modes share the guarantee."""
     from . import boulder as bmod
+    from . import submission as sub
     try:
         todo = b["todos"][i]
+        # --- mission-tag dispatch (checked FIRST) ---
+        tag_m = _MISSION_TAG_RE.match(todo["text"].strip())
+        if tag_m:
+            slug = sub.tag_parse(tag_m.group(0))
+            if slug is not None:
+                # depth guard: depth+1 > 2 -> BLOCKED
+                if depth + 1 > 2:
+                    todo["text"] += " [BLOCKED: max depth]"
+                    bmod.log(b, f"TODO {i+1} BLOCKED: max depth (depth={depth})")
+                    return
+                # children guard: >max_children mission tags -> BLOCKED
+                mission_count = sum(
+                    1 for t in b["todos"][:i + 1]
+                    if _MISSION_TAG_RE.match(t["text"].strip())
+                )
+                if mission_count > max_children:
+                    todo["text"] += f" [BLOCKED: max children {max_children}]"
+                    bmod.log(b, f"TODO {i+1} BLOCKED: max children "
+                             f"({mission_count} > {max_children})")
+                    return
+                # dispatch via mission_fn
+                if mission_fn is None:
+                    todo["text"] += " [BLOCKED: no mission_fn]"
+                    bmod.log(b, f"TODO {i+1} BLOCKED: no mission_fn")
+                    return
+                result = mission_fn(
+                    todo["text"].strip(), slug,
+                    sub.child_budget(timeout), depth + 1
+                )
+                score = result.get("score", 0)
+                wave_green = result.get("wave_green", False)
+                wave_str = "green" if wave_green else "red"
+                if sub.parent_flip(score, wave_str) == "done":
+                    bmod.flip(b, i, True)
+                    bmod.log(b, f"sub-mission {slug}: score={score} wave=green")
+                else:
+                    todo["text"] += (
+                        f" [BLOCKED: sub-mission score={score} wave={wave_str}]"
+                    )
+                    bmod.log(b, f"sub-mission {slug}: score={score} wave={wave_str}")
+                return
         role = resolve_role(todo, b)
         models = list(tier_models.get(role, []))
         if not models:
@@ -259,10 +308,12 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
 
 def run_loop(b: dict, tier_models: dict, workdir: str,
              runner=None, runslog: str = RUNSLOG_DEFAULT,
-             parallel: bool = False, sleep_fn=None, timeout: int = 600) -> dict:
+             parallel: bool = False, sleep_fn=None, timeout: int = 600,
+             *, depth: int = 0, mission_fn=None, max_children: int = 3) -> dict:
     """Execute each unchecked TODO; demote+retry once. parallel=True runs
     consecutive [role:explorer] TODOs concurrently via threads (stdlib only);
     every other role stays sequential in index order.
+    Mission-tag TODOs never join explorer thread batches (sequential dispatch).
     Batch scan uses resolve_role(todo) pure (no log); _exec_one re-resolves with
     b and records the unknown-tag fallback exactly once (review note 1)."""
     import concurrent.futures as cf
@@ -273,18 +324,26 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
             return
         with cf.ThreadPoolExecutor(max_workers=len(batch)) as ex:
             list(ex.map(lambda j: _exec_one(b, j, tier_models, workdir, runner, runslog,
-                                        sleep_fn, timeout),
+                                        sleep_fn, timeout,
+                                        depth=depth, mission_fn=mission_fn,
+                                        max_children=max_children),
                         batch))
         batch.clear()
 
     for i, todo in enumerate(b["todos"]):
         if todo["box"]:
             continue
-        if parallel and resolve_role(todo) in PARALLEL_ROLES:
+        # mission-tag TODOs: never join explorer batches, always sequential
+        if _MISSION_TAG_RE.match(todo["text"].strip()):
+            flush()
+            _exec_one(b, i, tier_models, workdir, runner, runslog, sleep_fn, timeout,
+                      depth=depth, mission_fn=mission_fn, max_children=max_children)
+        elif parallel and resolve_role(todo) in PARALLEL_ROLES:
             batch.append(i)
         else:
             flush()
-            _exec_one(b, i, tier_models, workdir, runner, runslog, sleep_fn, timeout)
+            _exec_one(b, i, tier_models, workdir, runner, runslog, sleep_fn, timeout,
+                      depth=depth, mission_fn=mission_fn, max_children=max_children)
     flush()
     return b
 
