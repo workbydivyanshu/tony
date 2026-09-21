@@ -676,3 +676,10 @@ PASS=0 FAIL=1
 - ruff 0, mypy 0 (29 files), keyless 0.
 - SURFACE LIVE: CLI unchanged (mission_fn not yet passed).
 - MISSION SCORE: 90/100 (hardening complete; next slice is live CLI wiring).
+
+## P40 — CLI mission_fn wiring (2026-09-22, autonomy)
+- Scope: wire the lib.submission machinery live into the tony CLI so that [mission:] tags actually execute as nested sub-missions.
+- Implementation: defined _run_sub_mission within tony which orchestrates a headless, pre-approved sub-mission and returns {"score": int, "wave_green": bool, "summary": str}. Passed to eng.run_loop in cmd_mission and cmd_resume.
+- GREEN: 305/305. ruff 0, mypy 0, keyless 0.
+- SURFACE LIVE: successfully executed a deep e2e test via opencode where a depth 1 sub-mission orchestrated a depth 2 sub-mission and aggregated scores cleanly back up.
+- MISSION SCORE: 90/100 (sub-missions are fully active in the agent CLI).
