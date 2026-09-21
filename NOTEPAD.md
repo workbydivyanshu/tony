@@ -681,3 +681,26 @@ PASS=0 FAIL=1
 - Debug trail (honest): first GREEN failed — work_files() lists .md only (marker was .txt); then FakeWin 24-line viewport hid the last-pane result (impl CORRECT, proven direct). Fix: .md marker + _BigWin test viewport. mypy scare was stale cache (rm -rf .mypy_cache, clean).
 - Must live on work/p34-foreign-workdir (needs lib/workdir.py): stashed, checked out branch, popped clean.
 - GREEN: 307/307. ruff 0, mypy 0 (29 files).
+## CLINE RUNG — definition (2026-09-21, autonomy, veto-able on wake)
+- Cline-level = judgment on open-ended tasks, mechanized as two buildable
+  capabilities (NOT raw intelligence — free-tier ceiling stands, declared):
+  (1) recon-first grounded planning (architect plans from explorer findings,
+  not blind mission text); (2) interactive clarification hook (architect asks
+  before burning on ambiguity). OMO rung (multi-agent orchestration) queues
+  behind. Hermes deltas unchanged (token/LinkedIn/tag-push = her calls).
+
+## P37 — recon-first planning (Cline rung, 2026-09-21)
+- lib/recon.py (new): run_recon_phase 3-angle explorer pre-pass over injected role_call_fn; per-call try/except (blowups yield nothing, never kill mission); "Report only — change nothing" on all angles (live lesson: an eager explorer wrote the deliverable mid-recon).
+- roles.architect_prompt gains trailing recon_lines (RECON section; workdir stays LAST per frozen P34 pin); cmd_mission --recon flag + pre-architect phase (explorer model w/ role_timeout budget, non-ok -> raise -> skip slot) + "recon N findings" print; findings ride into prompt.
+- LIVE (foreign /tmp/p37-foreign, --fast --recon): all 3 explorers throttled (120s timeouts) -> 0 findings -> blind plan -> 3/3 TODOs + 2/2 wave, 100/100, byte-exact artifact, git log empty. Degraded path proven end-to-end; fed-proof queued for a healthy tier window (injection mechanics unit-pinned meanwhile).
+- Incidents: 2 silent mission deaths mid-recon (no traceback/rows/boulder) + tool-infra killing launches (no setsid) — relaunched detached with python3 -u; mechanism proven via completions + fail-skips across 6+ explorer calls.
+- GREEN: 311/311 (307 + 4). ruff 0, mypy 0 (30 files), keyless 0. --selftest 4/4, doctor 10/10, 7 models live.
+- MISSION SCORE: 88/100 (wiring + degradation proven live; fed planning awaits tier).
+
+## P37 — recon-first planning (Cline rung, 2026-09-21)
+- lib/recon.py (new): run_recon_phase 3-angle explorer pass (layout/files/risks), findings ordered, per-slot try/except (recon never kills mission). roles.py: architect_prompt gains recon_lines (RECON section, LAST see below) — workdir stays LAST param (P34 frozen spec held).
+- Prompt hygiene find (live): eager explorer wrote the deliverable mid-recon (mission verb in angle text invites execution) -> angles carry "Report only — change nothing".
+- Delegation lane dead night-long (3 launch errors, 2 vanishing explores, 4 hangs); plan lane 1 timeout + 1 empty. All P37 work direct.
+- LIVE (foreign /tmp/p37-foreign, --recon): all 3 explorers throttled (120s timeouts) -> "recon 0 findings" -> blind plan -> 3/3 TODOs + 2/2 wave, 100/100, notes.txt RECON-OK exact, git log empty. Degraded path proven end-to-end; fed-proof queued for a healthy-tier window. Two earlier attempts died silently mid-recon (no traceback/rows — external kills suspected, buffers lost; P6 setsid lesson re-applied).
+- GREEN: 311/311 (307 + 4 new). ruff 0, mypy 0 (30 files). --selftest 4/4, doctor 10/10, 7 models.
+- MISSION SCORE: 89/100 (recon-first wired + degraded-proven; fed-proof pending tier).

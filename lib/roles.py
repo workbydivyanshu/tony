@@ -62,6 +62,7 @@ def critic_prompt(boulder_markdown: str) -> str:
 def architect_prompt(mission: str, mcp_servers: list | None = None,
                      memory_lines: list | None = None,
                      matched_skills: list | None = None,
+                     recon_lines: list | None = None,
                      workdir: str | None = None) -> str:
     # Enforcement boundary: prompts + plan gate. Sandboxing opencode out of scope.
     base = f"{ARCHITECT_SYSTEM}\nMISSION:\n{mission}\n"
@@ -77,5 +78,9 @@ def architect_prompt(mission: str, mcp_servers: list | None = None,
     if memory_lines:
         base += ("\nPersistent memory (facts from prior missions, respect them):\n"
                  + "\n".join(memory_lines[-20:]) + "\n")
+    if recon_lines:
+        base += ("\nRECON (explorer pass over the target repo — ground every "
+                 "TODO in these findings, do not plan blind):\n"
+                 + "\n".join(recon_lines) + "\n")
     from . import skills as skills_mod
     return skills_mod.inject_prompt(base, matched_skills or [])

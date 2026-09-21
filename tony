@@ -332,7 +332,7 @@ def cmd_research(topic: str, timeout: int = 900,
 
 def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
                 keep_going: bool = False, timeout: int = 600, yes: bool = False,
-                workdir: str | None = None) -> int:
+                workdir: str | None = None, recon: bool = False) -> int:
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
     from lib import engine as eng
     from lib import plangate as gate_mod
@@ -355,12 +355,30 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
         print(f"tony: WARNING --yes bypasses the sole human checkpoint on foreign workdir {workdir}")
     print(f"tony: mission '{mission[:80]}' -> slug {slug}")
     print(f"tony: architect = {assignments['architect']}")
+    recon_lines: list = []
+    if recon:
+        # P37 Cline rung: explorers map the repo BEFORE the architect plans.
+        # Findings ride into the prompt; a blowing recon never kills the mission.
+        from lib import recon as recon_mod
+        _explorer_model = assignments.get("explorer") or assignments["builder"]
+
+        def _recon_call(role: str, subtask: str) -> str:
+            _res = eng.role_call(role, _explorer_model, subtask, workdir,
+                                 timeout=eng.role_timeout("explorer", timeout))
+            if _res["status"] != "ok":
+                raise RuntimeError(f"recon {role} failed: {_res['status']}")
+            return _res["output"]
+
+        recon_lines = recon_mod.run_recon_phase(_recon_call, _explorer_model,
+                                                workdir, mission)
+        print(f"tony: recon {len(recon_lines)} findings")
     arch = eng.role_call("architect", assignments["architect"],
-                          roles.architect_prompt(mission, mcp.names(),
-                                                 mem_mod.recall(limit=20),
-                                                 matched_skills=_matched_skills(mission),
-                                                 workdir=workdir), workdir,
-                          timeout=timeout)
+                         roles.architect_prompt(mission, mcp.names(),
+                                                mem_mod.recall(limit=20),
+                                                matched_skills=_matched_skills(mission),
+                                                workdir=workdir,
+                                                recon_lines=recon_lines or None), workdir,
+                         timeout=timeout)
     print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
     if arch["status"] != "ok":
         print("tony: architect failed; boulder unwritten")
@@ -732,6 +750,7 @@ def main(argv=None) -> int:
     p.add_argument("--chat", metavar="SESSION", nargs="?", const="default", default=None, help="conversational loop with history (default session when bare)")
     p.add_argument("--dry-run", metavar="MISSION", default=None, help="plan only, write boulder, execute nothing")
     p.add_argument("--parallel", action="store_true", help="run [role:explorer] TODOs concurrently via threads")
+    p.add_argument("--recon", action="store_true", help="recon-first planning: explorers map the repo before the architect plans")
     p.add_argument("--max-verify", metavar="N", type=int, default=3, help="total wave attempts (default 3); fixes run between attempts only")
     p.add_argument("--resume", metavar="SLUG", default=None, help="resume boulder <slug>: run unchecked TODOs + wave, no second architect call")
     p.add_argument("--keep-going", action="store_true", help="run the wave even with [BLOCKED] TODOs (default: wave skipped when blocked)")
@@ -869,7 +888,7 @@ def main(argv=None) -> int:
     if args.mission:
         return cmd_mission(args.mission, parallel=args.parallel, max_verify=args.max_verify,
                            keep_going=args.keep_going, timeout=args.timeout,
-                           yes=args.yes, workdir=args.workdir)
+                           yes=args.yes, workdir=args.workdir, recon=args.recon)
     return cmd_models(args)
 
 
