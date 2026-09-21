@@ -25,7 +25,7 @@ Emit the boulder markdown EXACTLY in this shape and nothing else:
 Sub-mission tag: wrap a leaf TODO with [mission:<slug>] where <slug> is a
 short hyphenated identifier. Max 3 [mission:] tags per boulder; each must
 stay at leaf scope (no nested [mission:] inside another). Depth cap is 2 —
-a [mission:] tag at depth > 2 must be answered with an honest BLOCKED,
+a [mission:] tag at depth >= 2 must be answered with an honest BLOCKED,
 never fabricated.
 """
 

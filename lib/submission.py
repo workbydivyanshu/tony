@@ -46,36 +46,14 @@ def summarize(home: str, text: str) -> str:
     return truncated
 
 
-def _is_hostile(cmd: str) -> bool:
-    """Check if a command is destructive/hostile (stdlib-only deny-list)."""
-    c = cmd.strip().lower()
-    # Recursive rm on any target
-    if re.search(r"\brm\b.*\s-[a-zA-Z]*[rR]", c):
-        return True
-    # rm -rf / or similar root targets
-    if re.search(r"\brm\b.*\s-[a-zA-Z]*[rf][a-zA-Z]*.*\s(?:/|~|\*)", c):
-        return True
-    # sudo/su privilege escalation
-    if re.search(r"\b(?:sudo|su)\b", c):
-        return True
-    # Power/state control
-    if re.search(r"\b(?:shutdown|reboot|poweroff|halt)\b", c):
-        return True
-    # Fork bomb
-    if re.search(r":\s*\(\s*\)\s*\{", c):
-        return True
-    # Piped remote shell
-    if re.search(r"\b(?:curl|wget)\b.*\|\s*(?:sudo\s+)?(?:(?:ba|z|da)?sh|python[23]?|perl|ruby|php|node)\b", c):
-        return True
-    # Root rm with -r or -rf
-    if re.search(r"\brm\b.*\s-[a-zA-Z]*r", c) and re.search(r"\s(?:/|~|\*)", c):
-        return True
-    return False
-
-
 def run_wave(home: str, cmd: str, exec_fn) -> str:
-    """Hostile child wave -> BLOCKED; wave commands never executed."""
-    if _is_hostile(cmd):
+    """Hostile child wave -> BLOCKED; wave commands never executed.
+
+    Routes through waveguard.check (single deny-list authority; oracle gate 2).
+    Never maintains a private deny-list — drift kills security."""
+    from . import waveguard
+    safe, reason = waveguard.check(cmd)
+    if not safe:
         return "BLOCKED"
     exec_fn(cmd)
     return "OK"
