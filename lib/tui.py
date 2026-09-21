@@ -9,7 +9,7 @@ import os
 import sys
 import time
 
-from lib import boulder, watch
+from lib import boulder, watch, workdir as workdir_mod
 
 
 def should_use_curses() -> bool:
@@ -17,7 +17,8 @@ def should_use_curses() -> bool:
     return sys.stdout.isatty() and os.environ.get("TERM", "") != "dumb"
 
 
-def run_tui(slug: str, interval: int = 1, timeout: int = 0) -> int:
+def run_tui(slug: str, interval: int = 1, timeout: int = 0,
+            workdir: str | None = None) -> int:
     """Run a curses TUI polling a boulder's progress.
 
     Keys: q=quit, r=force-refresh, up/down/j/k=scroll.
@@ -37,13 +38,15 @@ def run_tui(slug: str, interval: int = 1, timeout: int = 0) -> int:
     if b is None:
         return 2
 
+    wdir = workdir_mod.resolve(workdir, slug)
+
     def _snapshot():
         try:
             b2 = boulder.load(bpath)
         except OSError:
             return None, None
         runs_tail = watch.tail_lines(os.path.join(os.path.expanduser("~"), ".tony", "runs.log"), 15)
-        wf = watch.work_files(os.path.join(os.path.expanduser("~"), ".tony", "work", slug))
+        wf = watch.work_files(wdir)
         return watch.render_snapshot(b2, runs_tail, wf, None), b2
 
     def _done(bd: dict) -> bool:

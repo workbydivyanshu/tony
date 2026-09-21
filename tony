@@ -791,7 +791,7 @@ def main(argv=None) -> int:
             print("tony: --tui requires a slug", file=sys.stderr)
             return 2
         if tui_mod.should_use_curses():
-            return tui_mod.run_tui(tui_slug)
+            return tui_mod.run_tui(tui_slug, workdir=args.workdir)
         else:
             print(f"tony: --tui: no TTY available; falling back to poll loop for '{tui_slug}'")
             return cmd_watch(tui_slug, workdir=args.workdir)

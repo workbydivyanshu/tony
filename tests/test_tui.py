@@ -308,3 +308,63 @@ def test_run_tui_uses_existing_renderer():
         _unpatch_curses()
         _restore_tty()
         os.unlink(bpath)
+
+
+class _BigWin(FakeWin):
+    """Viewport taller than any test render (work_files pane is last)."""
+
+    def getmaxyx(self):
+        return (200, 200)
+
+
+def test_run_tui_workdir_override_lists_foreign_files():
+    """run_tui(slug, workdir=tmpdir) renders tmpdir files, not default dir.
+
+    Big viewport: the work_files pane renders last, past FakeWin's
+    default 24 lines — a small viewport would hide a passing result.
+    """
+    import shutil
+    import tempfile
+    _set_tty(True)
+    bpath = _save_slug("tui-test-foreign", todos=("foreign check",), wave=())
+    tmpdir = tempfile.mkdtemp()
+    try:
+        with open(os.path.join(tmpdir, "FOREIGN-MARKER-XYZ.md"), "w") as f:
+            f.write("x")
+        win = _BigWin(ch_sequence=[ord("q")])
+        _patch_curses(win)
+        try:
+            tui.run_tui("tui-test-foreign", interval=0, timeout=0,
+                        workdir=tmpdir)
+            all_text = " ".join(str(a) for (a, k) in win.addstr_calls)
+            assert "FOREIGN-MARKER-XYZ.md" in all_text, all_text[:300]
+        finally:
+            _unpatch_curses()
+    finally:
+        _restore_tty()
+        os.unlink(bpath)
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_run_tui_default_workdir_unchanged():
+    """No workdir param -> default ~/.tony/work/<slug> (old behavior)."""
+    import shutil
+    import tempfile
+    _set_tty(True)
+    bpath = _save_slug("tui-test-default", todos=("default check",), wave=())
+    tmpdir = tempfile.mkdtemp()
+    try:
+        with open(os.path.join(tmpdir, "SHOULD-NOT-APPEAR-XYZ.txt"), "w") as f:
+            f.write("x")
+        win = _BigWin(ch_sequence=[ord("q")])
+        _patch_curses(win)
+        try:
+            tui.run_tui("tui-test-default", interval=0, timeout=0)
+            all_text = " ".join(str(a) for (a, k) in win.addstr_calls)
+            assert "SHOULD-NOT-APPEAR-XYZ.txt" not in all_text, all_text[:300]
+        finally:
+            _unpatch_curses()
+    finally:
+        _restore_tty()
+        os.unlink(bpath)
+        shutil.rmtree(tmpdir, ignore_errors=True)

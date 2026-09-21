@@ -675,3 +675,9 @@ PASS=0 FAIL=1
 - Live proof: gate-ON default in non-TTY proceeds via headless-skip log (TTy-hold covered by plangate pins); foreign+yes warning wired.
 - GREEN: 305/305. ruff 0, mypy 0 (29 files), keyless 0. --selftest 4/4, doctor 10/10, 7 models live.
 - MISSION SCORE: 90/100 (Tony runs coding missions in foreign repos with ledger staying home; residual: builder-shell enforcement is doctrine-only, declared).
+
+## P35 — TUI workdir override (foreign-workdir follow-up, 2026-09-21)
+- Gap (explore SEAM 10, deferred by plan): lib/tui.py hardcoded ~/.tony/work/<slug>; foreign watch rendered the wrong dir. run_tui gains workdir=None -> workdir_mod.resolve; tony --tui threads args.workdir.
+- Debug trail (honest): first GREEN failed — work_files() lists .md only (marker was .txt); then FakeWin 24-line viewport hid the last-pane result (impl CORRECT, proven direct). Fix: .md marker + _BigWin test viewport. mypy scare was stale cache (rm -rf .mypy_cache, clean).
+- Must live on work/p34-foreign-workdir (needs lib/workdir.py): stashed, checked out branch, popped clean.
+- GREEN: 307/307. ruff 0, mypy 0 (29 files).
