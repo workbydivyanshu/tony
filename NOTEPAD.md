@@ -734,3 +734,9 @@ PASS=0 FAIL=1
 - SURFACE LIVE: successfully executed a deep e2e test via opencode where a depth 1 sub-mission orchestrated a depth 2 sub-mission and aggregated scores cleanly back up.
 - MISSION SCORE: 90/100 (sub-missions are fully active in the agent CLI).
 
+## P41 — interactive clarification hook (Cline rung, 2026-09-22, autonomy)
+- Scope: complete the Cline rung by implementing the interactive clarification hook. If a mission is fatally ambiguous, the architect asks for clarification before burning execution tokens.
+- Implementation: added instruction to ARCHITECT_SYSTEM to output "CLARIFY: <question>" instead of a boulder. tony CLI cmd_mission loops up to 3 times, prompting the operator and appending the answer to the mission text. Sub-missions (_run_sub_mission) running headless immediately abort.
+- RED: 2 pins. GREEN: 338/338 (336 prior unmodified + 2 new). ruff 0, mypy 0 (31 files), keyless 0.
+- SURFACE LIVE: successfully halts and prompts the user on TTY, aborts on headless, and proceeds with planned boulder on the subsequent try.
+- MISSION SCORE: 100/100 (Cline rung fully shipped: recon-first planning + interactive clarification).

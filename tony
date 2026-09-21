@@ -353,7 +353,11 @@ def _run_sub_mission(prompt: str, slug: str, child_timeout: int, depth: int) -> 
         print(f"tony [depth {depth}]: architect failed")
         return {"score": 0, "wave_green": False, "summary": "architect failed"}
 
-    clean = eng.sanitize(arch["output"])
+    clean = eng.sanitize(arch["output"]).strip()
+    if clean.startswith("CLARIFY:"):
+        print(f"tony [depth {depth}]: sub-mission architect requested clarification (aborting)")
+        return {"score": 0, "wave_green": False, "summary": "BLOCKED: architect requested clarification"}
+
     b = boulder.parse(clean) if "# Boulder" in clean else boulder.new(slug)
     if not b["todos"]:
         boulder.add_todo(b, clean[:400])
@@ -448,18 +452,36 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
         recon_lines = recon_mod.run_recon_phase(_recon_call, _explorer_model,
                                                 workdir, mission)
         print(f"tony: recon {len(recon_lines)} findings")
-    arch = eng.role_call("architect", assignments["architect"],
-                         roles.architect_prompt(mission, mcp.names(),
-                                                mem_mod.recall(limit=20),
-                                                matched_skills=_matched_skills(mission),
-                                                workdir=workdir,
-                                                recon_lines=recon_lines or None), workdir,
-                         timeout=timeout)
-    print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
-    if arch["status"] != "ok":
-        print("tony: architect failed; boulder unwritten")
-        return 1
-    clean = eng.sanitize(arch["output"])
+    attempts = 0
+    while attempts < 3:
+        arch = eng.role_call("architect", assignments["architect"],
+                             roles.architect_prompt(mission, mcp.names(),
+                                                    mem_mod.recall(limit=20),
+                                                    matched_skills=_matched_skills(mission),
+                                                    workdir=workdir,
+                                                    recon_lines=recon_lines or None), workdir,
+                             timeout=timeout)
+        print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
+        if arch["status"] != "ok":
+            print("tony: architect failed; boulder unwritten")
+            return 1
+        clean = eng.sanitize(arch["output"]).strip()
+        if clean.startswith("CLARIFY:"):
+            import sys as _sys
+            if not _sys.stdin.isatty() or yes:
+                print("tony: architect requested clarification but running headless (aborting)")
+                return 1
+            question = clean[len("CLARIFY:"):].strip()
+            print(f"\nArchitect asks: {question}")
+            try:
+                answer = input("Your answer: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\nMISSION HELD — clarification aborted")
+                return 2
+            mission += f"\n\n[Clarification]: {question}\n[Answer]: {answer}"
+            attempts += 1
+            continue
+        break
     b = boulder.parse(clean) if "# Boulder" in clean else boulder.new(slug)
     if not b["todos"]:
         boulder.add_todo(b, clean[:400])
