@@ -13,7 +13,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib import boulder, catalog, config, doctor, mcp, memory as mem_mod, roles, score as score_mod, tiers, watch  # noqa: E402
+from lib import boulder, catalog, config, doctor, mcp, memory as mem_mod, roles, score as score_mod, tiers, watch, workdir as workdir_mod  # noqa: E402
 
 VERSION = "0.4.0-p24"
 TONY_DIR = os.path.join(os.path.expanduser("~"), ".tony")
@@ -183,7 +183,8 @@ def cmd_memory(_args) -> int:
     return cmd_recall(None)
 
 
-def cmd_chat(session, timeout: int = 600) -> int:
+def cmd_chat(session, timeout: int = 600,
+             workdir: str | None = None) -> int:
     """Conversational loop: fresh memory injected per turn, one fast-tier call each."""
     from lib import chat as chat_mod
     from lib import engine as eng
@@ -194,7 +195,7 @@ def cmd_chat(session, timeout: int = 600) -> int:
     if not model:
         print("tony: no fast-tier model available for chat", file=sys.stderr)
         return 1
-    workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", "chat-" + name)
+    workdir = workdir_mod.resolve(workdir, "chat-" + name)
     print(f"tony chat [{name}] on {model} — /quit to exit")
 
     def _live(prompt: str) -> str:
@@ -237,7 +238,8 @@ def _matched_skills(mission: str) -> list:
     return skills_mod.match(mission, skills_mod.discover())
 
 
-def cmd_research(topic: str, timeout: int = 900) -> int:
+def cmd_research(topic: str, timeout: int = 900,
+                  workdir: str | None = None) -> int:
     """Deep-research fan-out: 3 parallel explorers (websearch MCP) -> researcher
     synthesis -> critic gate -> wave (report exists, >=3 cited URLs)."""
     from concurrent.futures import ThreadPoolExecutor
@@ -246,7 +248,7 @@ def cmd_research(topic: str, timeout: int = 900) -> int:
     raw = tiers.assign_roles_with_sources(models, config.get_roles() or None)
     assignments = {r: (v["model"] if isinstance(v, dict) else v) for r, v in raw.items()}
     slug = slugify(f"research {topic}")[:48]
-    workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", slug)
+    workdir = workdir_mod.resolve(workdir, slug)
     print(f"tony: research '{topic[:80]}' -> slug {slug}")
 
     prompts = res_mod.explorer_prompts(topic)
@@ -307,15 +309,17 @@ def cmd_research(topic: str, timeout: int = 900) -> int:
             gate = "PASS-after-fix"
     print(f"tony: critic gate {gate}")
 
-    results_wave = [subprocess.run(c, shell=True, capture_output=True).returncode == 0
-                    for c in res_mod.wave_cmds(report_path, sources_path)]
+    b2 = boulder.new("research wave")
+    for _cmd in res_mod.wave_cmds(report_path, sources_path):
+        boulder.add_wave(b2, _cmd)
+    _wave_results = eng.run_wave(b2, cwd=workdir)
     b["todos"][0]["box"] = ok_n > 0
     b["todos"][1]["box"] = syn["status"] == "ok"
     boulder.add_wave(b, "report exists")
-    b["wave"][0]["box"] = results_wave[0]
+    b["wave"][0]["box"] = _wave_results[0]
     boulder.add_wave(b, "citations verified from explorer corpus")
-    b["wave"][1]["box"] = results_wave[1]
-    boulder.log(b, f"critic gate {gate}; wave {sum(results_wave)}/2")
+    b["wave"][1]["box"] = _wave_results[1]
+    boulder.log(b, f"critic gate {gate}; wave {sum(_wave_results)}/2")
     boulder.save(slug, b)
     score = score_mod.compute(b, gate)["score"]
     rp = rep.write(os.path.expanduser("~/.fleet/out"), slug, f"research: {topic}",
@@ -403,7 +407,8 @@ def _run_sub_mission(prompt: str, slug: str, child_timeout: int, depth: int) -> 
 
 
 def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
-                keep_going: bool = False, timeout: int = 600, yes: bool = False) -> int:
+                keep_going: bool = False, timeout: int = 600, yes: bool = False,
+                workdir: str | None = None, recon: bool = False) -> int:
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
     from lib import engine as eng
     from lib import plangate as gate_mod
@@ -420,13 +425,35 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
     raw = tiers.assign_roles_with_sources(models, overrides)
     assignments = {r: (v["model"] if isinstance(v, dict) else v) for r, v in raw.items()}
     slug = slugify(mission)
-    workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", slug)
+    workdir = workdir_mod.resolve(workdir, slug)
+    # Foreign workdir + --yes bypasses the sole human checkpoint
+    if yes and workdir_mod.is_foreign(workdir):
+        print(f"tony: WARNING --yes bypasses the sole human checkpoint on foreign workdir {workdir}")
     print(f"tony: mission '{mission[:80]}' -> slug {slug}")
     print(f"tony: architect = {assignments['architect']}")
+    recon_lines: list = []
+    if recon:
+        # P37 Cline rung: explorers map the repo BEFORE the architect plans.
+        # Findings ride into the prompt; a blowing recon never kills the mission.
+        from lib import recon as recon_mod
+        _explorer_model = assignments.get("explorer") or assignments["builder"]
+
+        def _recon_call(role: str, subtask: str) -> str:
+            _res = eng.role_call(role, _explorer_model, subtask, workdir,
+                                 timeout=eng.role_timeout("explorer", timeout))
+            if _res["status"] != "ok":
+                raise RuntimeError(f"recon {role} failed: {_res['status']}")
+            return _res["output"]
+
+        recon_lines = recon_mod.run_recon_phase(_recon_call, _explorer_model,
+                                                workdir, mission)
+        print(f"tony: recon {len(recon_lines)} findings")
     arch = eng.role_call("architect", assignments["architect"],
                          roles.architect_prompt(mission, mcp.names(),
                                                 mem_mod.recall(limit=20),
-                                                matched_skills=_matched_skills(mission)), workdir,
+                                                matched_skills=_matched_skills(mission),
+                                                workdir=workdir,
+                                                recon_lines=recon_lines or None), workdir,
                          timeout=timeout)
     print(f"tony: architect call {arch['status']} ({arch['duration']:.0f}s) -> {arch['outfile']}")
     if arch["status"] != "ok":
@@ -488,7 +515,8 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
 
 
 def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
-               keep_going: bool = False, timeout: int = 600) -> int:
+                keep_going: bool = False, timeout: int = 600,
+                workdir: str | None = None) -> int:
     """Resume: load ~/.tony/boulders/<slug>.md, run unchecked TODOs + wave + report.
 
     No second architect call — continuity lives in the boulder (scripture Ch.2
@@ -508,7 +536,7 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
     overrides = config.get_roles() or None
     raw = tiers.assign_roles_with_sources(models, overrides)
     assignments = {r: (v["model"] if isinstance(v, dict) else v) for r, v in raw.items()}
-    workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", slug)
+    workdir = workdir_mod.resolve(workdir, slug)
     boulder.log(b, f"resume: {sum(1 for t in b['todos'] if t['box'])}/{len(b['todos'])} TODOs already done")
     tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
 
@@ -535,7 +563,8 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
     return 0
 
 
-def cmd_watch(slug: str, interval: int = 2, once: bool = False, timeout: int = 0) -> int:
+def cmd_watch(slug: str, interval: int = 2, once: bool = False,
+               timeout: int = 0, workdir: str | None = None) -> int:
     """Watch: poll a boulder's progress via render_snapshot + runs.log + workdir."""
     bpath = boulder.path_for(slug)
     try:
@@ -545,7 +574,7 @@ def cmd_watch(slug: str, interval: int = 2, once: bool = False, timeout: int = 0
         return 2
 
     runslog = os.path.join(TONY_DIR, "runs.log")
-    workdir = os.path.join(TONY_DIR, "work", slug)
+    workdir = workdir_mod.resolve(workdir, slug)
 
     def _snapshot() -> str:
         try:
@@ -799,6 +828,7 @@ def main(argv=None) -> int:
     p.add_argument("--chat", metavar="SESSION", nargs="?", const="default", default=None, help="conversational loop with history (default session when bare)")
     p.add_argument("--dry-run", metavar="MISSION", default=None, help="plan only, write boulder, execute nothing")
     p.add_argument("--parallel", action="store_true", help="run [role:explorer] TODOs concurrently via threads")
+    p.add_argument("--recon", action="store_true", help="recon-first planning: explorers map the repo before the architect plans")
     p.add_argument("--max-verify", metavar="N", type=int, default=3, help="total wave attempts (default 3); fixes run between attempts only")
     p.add_argument("--resume", metavar="SLUG", default=None, help="resume boulder <slug>: run unchecked TODOs + wave, no second architect call")
     p.add_argument("--keep-going", action="store_true", help="run the wave even with [BLOCKED] TODOs (default: wave skipped when blocked)")
@@ -814,6 +844,7 @@ def main(argv=None) -> int:
     p.add_argument("--interval", metavar="N", type=int, default=10, help="daemon poll interval in seconds (default 10)")
     p.add_argument("--timeout", metavar="N", type=int, default=600, help="mission timeout in seconds (default 600); per-role budgets scale from it (architect 1.0, builder 0.8, researcher/critic 0.6, explorer 0.4, scribe 0.2)")
     p.add_argument("--fast", action="store_true", help="halve all role timeouts (mission timeout / 2): cheap missions, tighter stall caps")
+    p.add_argument("--workdir", metavar="DIR", default=None, help="override the work directory (~/.tony/work/<slug> by default)")
     p.add_argument("--set-role", metavar="ROLE=PATTERN", default=None, help="pin role to a live-model regex pattern")
     p.add_argument("--clear-role", metavar="ROLE", default=None, help="drop a role override")
     p.add_argument("--show-config", action="store_true", help="print effective role->model map with sources")
@@ -834,8 +865,10 @@ def main(argv=None) -> int:
         wp.add_argument("--interval", type=int, default=2, help="poll interval in seconds (default 2)")
         wp.add_argument("--once", action="store_true", help="print a single snapshot and exit")
         wp.add_argument("--timeout", type=int, default=0, help="exit after S seconds (0=never)")
+        wp.add_argument("--workdir", metavar="DIR", default=None, help="override the work directory")
         wargs = wp.parse_args(rest)
-        return cmd_watch(wargs.slug, interval=wargs.interval, once=wargs.once, timeout=wargs.timeout)
+        return cmd_watch(wargs.slug, interval=wargs.interval, once=wargs.once,
+                          timeout=wargs.timeout, workdir=wargs.workdir)
     if args.mission == "watch" and "watch" in argv and argv.index("watch") + 1 < len(argv):
         wi = argv.index("watch")
         wp = argparse.ArgumentParser(prog="tony watch")
@@ -843,8 +876,10 @@ def main(argv=None) -> int:
         wp.add_argument("--interval", type=int, default=2, help="poll interval in seconds (default 2)")
         wp.add_argument("--once", action="store_true", help="print a single snapshot and exit")
         wp.add_argument("--timeout", type=int, default=0, help="exit after S seconds (0=never)")
+        wp.add_argument("--workdir", metavar="DIR", default=None, help="override the work directory")
         wargs = wp.parse_args(argv[wi + 1:])
-        return cmd_watch(wargs.slug, interval=wargs.interval, once=wargs.once, timeout=wargs.timeout)
+        return cmd_watch(wargs.slug, interval=wargs.interval, once=wargs.once,
+                          timeout=wargs.timeout, workdir=wargs.workdir)
     if args.tui:
         from lib import tui as tui_mod
         tui_idx = argv.index("--tui")
@@ -853,10 +888,10 @@ def main(argv=None) -> int:
             print("tony: --tui requires a slug", file=sys.stderr)
             return 2
         if tui_mod.should_use_curses():
-            return tui_mod.run_tui(tui_slug)
+            return tui_mod.run_tui(tui_slug, workdir=args.workdir)
         else:
             print(f"tony: --tui: no TTY available; falling back to poll loop for '{tui_slug}'")
-            return cmd_watch(tui_slug)
+            return cmd_watch(tui_slug, workdir=args.workdir)
     if args.set_role:
         return cmd_set_role(args.set_role)
     if args.clear_role:
@@ -867,7 +902,8 @@ def main(argv=None) -> int:
         return cmd_auto_config(args)
     if args.resume:
         return cmd_resume(args.resume, parallel=args.parallel, max_verify=args.max_verify,
-                          keep_going=args.keep_going, timeout=args.timeout)
+                          keep_going=args.keep_going, timeout=args.timeout,
+                          workdir=args.workdir)
     if args.daemon or args.daemon_once:
         return cmd_daemon(args.inbox, interval=args.interval, once=args.daemon_once,
                           parallel=args.parallel, max_verify=args.max_verify,
@@ -888,7 +924,8 @@ def main(argv=None) -> int:
         print(f"tony: enable FAILED: {res.get('error', 'unknown')}")
         return 1
     if args.research:
-        return cmd_research(args.research, timeout=args.timeout)
+        return cmd_research(args.research, timeout=args.timeout,
+                             workdir=args.workdir)
     if args.skills:
         from lib import skills as skills_mod
         found = skills_mod.discover()
@@ -920,14 +957,16 @@ def main(argv=None) -> int:
     if args.memory:
         return cmd_memory(args)
     if args.chat is not None:
-        return cmd_chat(args.chat or "default", timeout=args.timeout)
+        return cmd_chat(args.chat or "default", timeout=args.timeout,
+                          workdir=args.workdir)
     if args.status:
         return cmd_status(args)
     if args.dry_run:
         return cmd_dryrun(args.dry_run)
     if args.mission:
         return cmd_mission(args.mission, parallel=args.parallel, max_verify=args.max_verify,
-                           keep_going=args.keep_going, timeout=args.timeout, yes=args.yes)
+                           keep_going=args.keep_going, timeout=args.timeout,
+                           yes=args.yes, workdir=args.workdir, recon=args.recon)
     return cmd_models(args)
 
 
