@@ -669,3 +669,10 @@ PASS=0 FAIL=1
 - SURFACE LIVE: --help OK; --models 7 live; --selftest/--doctor unaffected. Zero model burn (injected mission_fn fakes + echo/false only).
 - MISSION SCORE: 90/100 (OMO rung mechanism shipped: nested supervised sub-missions with depth/budget/children guards; residual is live-model child loops — her acceptance gates real runs).
 - ORACLE REVIEW (ses_f3afa3a68ffeyj9nBBlP23vfea): MERGE-WITH-NOTES. Live CLI never passes mission_fn (tony:371,444) so tags honestly BLOCKED today; kwargs keyword-only; mission tags excluded from explorer batches; boulder flip/log strictly sequential. Pre-wiring gates for the live-mission_fn slice: (1) prefix-only dispatch misses "[role:X] [mission:slug]" combos (engine.py:234 match vs resolve_role search) — silent guard bypass once wired; (2) route real child waves via waveguard.check, never submission.run_wave (drift risk); (3) tag_parse full-string anchor + whitespace-slug fallthrough to role_call (clamp to BLOCKED); (4) roles.py "depth > 2" wording off-by-one (code blocks at depth>=2). Resume re-dispatch stacks BLOCKED suffixes (pre-existing pattern, acceptable).
+
+## P39 — oracle gates for sub-missions (2026-09-21, autonomy)
+- Scope: address the 4 pre-wiring gates flagged by P38 oracle review: (1) combo-tag dispatch bypass via search(), (2) route run_wave through waveguard.check to eliminate submission._is_hostile drift, (3) clamp malformed/whitespace mission tags to BLOCKED instead of falling through to role_call, (4) fix doctrine wording to depth >= 2.
+- RED: 5 pins (combo bypass, combo children count, doctrine wording, duplicate _is_hostile, waveguard routing bypass). GREEN: 305/305 (296 prior unmodified + 9 new). test_p39_oracle_gates.py renamed to test_mission_tag_guards.py to respect P20 naming convention.
+- ruff 0, mypy 0 (29 files), keyless 0.
+- SURFACE LIVE: CLI unchanged (mission_fn not yet passed).
+- MISSION SCORE: 90/100 (hardening complete; next slice is live CLI wiring).

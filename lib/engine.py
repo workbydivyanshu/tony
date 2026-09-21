@@ -230,7 +230,9 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
     try:
         todo = b["todos"][i]
         # --- mission-tag dispatch (checked FIRST) ---
-        tag_m = _MISSION_TAG_RE.match(todo["text"].strip())
+        # search() not match(): combo tags like [role:X] [mission:slug]
+        # must dispatch as missions, not fall through to role_call (oracle gate 1)
+        tag_m = _MISSION_TAG_RE.search(todo["text"].strip())
         if tag_m:
             slug = sub.tag_parse(tag_m.group(0))
             if slug is not None:
@@ -242,7 +244,7 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
                 # children guard: >max_children mission tags -> BLOCKED
                 mission_count = sum(
                     1 for t in b["todos"][:i + 1]
-                    if _MISSION_TAG_RE.match(t["text"].strip())
+                    if _MISSION_TAG_RE.search(t["text"].strip())
                 )
                 if mission_count > max_children:
                     todo["text"] += f" [BLOCKED: max children {max_children}]"
@@ -269,6 +271,13 @@ def _exec_one(b: dict, i: int, tier_models: dict, workdir: str,
                         f" [BLOCKED: sub-mission score={score} wave={wave_str}]"
                     )
                     bmod.log(b, f"sub-mission {slug}: score={score} wave={wave_str}")
+                return
+            else:
+                # Malformed mission tag (empty/whitespace slug): clamp to BLOCKED,
+                # never fall through to role_call (oracle gate 3)
+                todo["text"] += " [BLOCKED: malformed mission tag]"
+                bmod.log(b, f"TODO {i+1} BLOCKED: malformed mission tag "
+                         f"({tag_m.group(0)!r})")
                 return
         role = resolve_role(todo, b)
         models = list(tier_models.get(role, []))
@@ -334,7 +343,7 @@ def run_loop(b: dict, tier_models: dict, workdir: str,
         if todo["box"]:
             continue
         # mission-tag TODOs: never join explorer batches, always sequential
-        if _MISSION_TAG_RE.match(todo["text"].strip()):
+        if _MISSION_TAG_RE.search(todo["text"].strip()):
             flush()
             _exec_one(b, i, tier_models, workdir, runner, runslog, sleep_fn, timeout,
                       depth=depth, mission_fn=mission_fn, max_children=max_children)
