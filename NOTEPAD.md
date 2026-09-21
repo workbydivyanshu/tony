@@ -683,3 +683,9 @@ PASS=0 FAIL=1
 - GREEN: 305/305. ruff 0, mypy 0, keyless 0.
 - SURFACE LIVE: successfully executed a deep e2e test via opencode where a depth 1 sub-mission orchestrated a depth 2 sub-mission and aggregated scores cleanly back up.
 - MISSION SCORE: 90/100 (sub-missions are fully active in the agent CLI).
+
+## P36 — sched done-report (2026-09-21)
+- Dawn-proven gap: sched branch returned bare dict (ledger mark only, zero trace). Now mirrors inbox artifacts: done-file + notify on non-None res; None writes nothing.
+- T1 delegate vanished pre-write (record expired); executed direct. RED: 3 missing-artifact FAILs + None anchor.
+- GREEN: 288/288 (284 + 4). ruff 0, mypy 0 (28 files), keyless 0. --selftest 4/4, doctor 10/10.
+- MISSION SCORE: 88/100 (silent failures now leave traces; live dawn proof pending next window).
