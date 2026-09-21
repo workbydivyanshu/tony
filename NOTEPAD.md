@@ -704,3 +704,14 @@ PASS=0 FAIL=1
 - LIVE (foreign /tmp/p37-foreign, --recon): all 3 explorers throttled (120s timeouts) -> "recon 0 findings" -> blind plan -> 3/3 TODOs + 2/2 wave, 100/100, notes.txt RECON-OK exact, git log empty. Degraded path proven end-to-end; fed-proof queued for a healthy-tier window. Two earlier attempts died silently mid-recon (no traceback/rows — external kills suspected, buffers lost; P6 setsid lesson re-applied).
 - GREEN: 311/311 (307 + 4 new). ruff 0, mypy 0 (30 files). --selftest 4/4, doctor 10/10, 7 models.
 - MISSION SCORE: 89/100 (recon-first wired + degraded-proven; fed-proof pending tier).
+
+## OMO RUNG — definition (2026-09-21, autonomy, veto-able on wake)
+- OMO-level = nested supervised sub-missions. Mechanized, buildable, NOT
+  raw multi-agent magic: an architect may tag a TODO [mission:<slug>] to
+  spawn a FULL child loop (plan→execute→verify→score) whose boulder links
+  to the parent; depth cap 2, per-level model/time budgets, child outputs
+  folded back as TODO evidence; the critic supervises child boulders like
+  ordinary TODOs. What it is NOT: persistent personas, cross-mission memory
+  agents, or anything needing new model capability (free-tier ceiling stands).
+- Execution deliberately NOT tonight: infra flaky (tool interruptions,
+  throttled tier, dead launcher), acceptance needed first. Plan-only.
