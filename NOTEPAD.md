@@ -663,27 +663,6 @@ PASS=0 FAIL=1
   local-only work can vanish). AGENTS.md carries the enforceable version.
 - First push under this law: work/night-2026-09-21 (H1+P29-P32+T1, 9 commits).
 
-## P38 nested sub-missions (2026-09-21, ultrawork — plan ses_f3b7c6644ffe9xwYUONevVhgng)
-- Scope: [mission:<slug>] TODOs spawn bounded child dispatch: depth cap 2, max 3 children/parent, child budget parent_timeout//2 floor 60s, parent flips done iff child score>=60 AND wave green else honest BLOCKED; mission tags never join explorer thread batches; architect doctrine in ARCHITECT_SYSTEM; boulder.py/score.py/waveguard.py untouched.
-- RED: 12 pins (8 lib.submission units ModuleNotFoundError + 3 engine TypeError on depth kwarg + 1 roles AssertionError on doctrine). GREEN: 296/296 (284 prior unmodified + 12 new). ruff 0, mypy 0 (29 files), keyless 0, no new opencode/<id> literals.
-- SURFACE LIVE: --help OK; --models 7 live; --selftest/--doctor unaffected. Zero model burn (injected mission_fn fakes + echo/false only).
-- MISSION SCORE: 90/100 (OMO rung mechanism shipped: nested supervised sub-missions with depth/budget/children guards; residual is live-model child loops — her acceptance gates real runs).
-- ORACLE REVIEW (ses_f3afa3a68ffeyj9nBBlP23vfea): MERGE-WITH-NOTES. Live CLI never passes mission_fn (tony:371,444) so tags honestly BLOCKED today; kwargs keyword-only; mission tags excluded from explorer batches; boulder flip/log strictly sequential. Pre-wiring gates for the live-mission_fn slice: (1) prefix-only dispatch misses "[role:X] [mission:slug]" combos (engine.py:234 match vs resolve_role search) — silent guard bypass once wired; (2) route real child waves via waveguard.check, never submission.run_wave (drift risk); (3) tag_parse full-string anchor + whitespace-slug fallthrough to role_call (clamp to BLOCKED); (4) roles.py "depth > 2" wording off-by-one (code blocks at depth>=2). Resume re-dispatch stacks BLOCKED suffixes (pre-existing pattern, acceptable).
-
-## P39 — oracle gates for sub-missions (2026-09-21, autonomy)
-- Scope: address the 4 pre-wiring gates flagged by P38 oracle review: (1) combo-tag dispatch bypass via search(), (2) route run_wave through waveguard.check to eliminate submission._is_hostile drift, (3) clamp malformed/whitespace mission tags to BLOCKED instead of falling through to role_call, (4) fix doctrine wording to depth >= 2.
-- RED: 5 pins (combo bypass, combo children count, doctrine wording, duplicate _is_hostile, waveguard routing bypass). GREEN: 305/305 (296 prior unmodified + 9 new). test_p39_oracle_gates.py renamed to test_mission_tag_guards.py to respect P20 naming convention.
-- ruff 0, mypy 0 (29 files), keyless 0.
-- SURFACE LIVE: CLI unchanged (mission_fn not yet passed).
-- MISSION SCORE: 90/100 (hardening complete; next slice is live CLI wiring).
-
-## P40 — CLI mission_fn wiring (2026-09-22, autonomy)
-- Scope: wire the lib.submission machinery live into the tony CLI so that [mission:] tags actually execute as nested sub-missions.
-- Implementation: defined _run_sub_mission within tony which orchestrates a headless, pre-approved sub-mission and returns {"score": int, "wave_green": bool, "summary": str}. Passed to eng.run_loop in cmd_mission and cmd_resume.
-- GREEN: 305/305. ruff 0, mypy 0, keyless 0.
-- SURFACE LIVE: successfully executed a deep e2e test via opencode where a depth 1 sub-mission orchestrated a depth 2 sub-mission and aggregated scores cleanly back up.
-- MISSION SCORE: 90/100 (sub-missions are fully active in the agent CLI).
-
 ## P36 — sched done-report (2026-09-21)
 - Dawn-proven gap: sched branch returned bare dict (ledger mark only, zero trace). Now mirrors inbox artifacts: done-file + notify on non-None res; None writes nothing.
 - T1 delegate vanished pre-write (record expired); executed direct. RED: 3 missing-artifact FAILs + None anchor.
@@ -724,14 +703,6 @@ PASS=0 FAIL=1
 - GREEN: 311/311 (307 + 4). ruff 0, mypy 0 (30 files), keyless 0. --selftest 4/4, doctor 10/10, 7 models live.
 - MISSION SCORE: 88/100 (wiring + degradation proven live; fed planning awaits tier).
 
-## P37 — recon-first planning (Cline rung, 2026-09-21)
-- lib/recon.py (new): run_recon_phase 3-angle explorer pass (layout/files/risks), findings ordered, per-slot try/except (recon never kills mission). roles.py: architect_prompt gains recon_lines (RECON section, LAST see below) — workdir stays LAST param (P34 frozen spec held).
-- Prompt hygiene find (live): eager explorer wrote the deliverable mid-recon (mission verb in angle text invites execution) -> angles carry "Report only — change nothing".
-- Delegation lane dead night-long (3 launch errors, 2 vanishing explores, 4 hangs); plan lane 1 timeout + 1 empty. All P37 work direct.
-- LIVE (foreign /tmp/p37-foreign, --recon): all 3 explorers throttled (120s timeouts) -> "recon 0 findings" -> blind plan -> 3/3 TODOs + 2/2 wave, 100/100, notes.txt RECON-OK exact, git log empty. Degraded path proven end-to-end; fed-proof queued for a healthy-tier window. Two earlier attempts died silently mid-recon (no traceback/rows — external kills suspected, buffers lost; P6 setsid lesson re-applied).
-- GREEN: 311/311 (307 + 4 new). ruff 0, mypy 0 (30 files). --selftest 4/4, doctor 10/10, 7 models.
-- MISSION SCORE: 89/100 (recon-first wired + degraded-proven; fed-proof pending tier).
-
 ## OMO RUNG — definition (2026-09-21, autonomy, veto-able on wake)
 - OMO-level = nested supervised sub-missions. Mechanized, buildable, NOT
   raw multi-agent magic: an architect may tag a TODO [mission:<slug>] to
@@ -742,3 +713,24 @@ PASS=0 FAIL=1
   agents, or anything needing new model capability (free-tier ceiling stands).
 - Execution deliberately NOT tonight: infra flaky (tool interruptions,
   throttled tier, dead launcher), acceptance needed first. Plan-only.
+## P38 nested sub-missions (2026-09-21, ultrawork — plan ses_f3b7c6644ffe9xwYUONevVhgng)
+- Scope: [mission:<slug>] TODOs spawn bounded child dispatch: depth cap 2, max 3 children/parent, child budget parent_timeout//2 floor 60s, parent flips done iff child score>=60 AND wave green else honest BLOCKED; mission tags never join explorer thread batches; architect doctrine in ARCHITECT_SYSTEM; boulder.py/score.py/waveguard.py untouched.
+- RED: 12 pins (8 lib.submission units ModuleNotFoundError + 3 engine TypeError on depth kwarg + 1 roles AssertionError on doctrine). GREEN: 296/296 (284 prior unmodified + 12 new). ruff 0, mypy 0 (29 files), keyless 0, no new opencode/<id> literals.
+- SURFACE LIVE: --help OK; --models 7 live; --selftest/--doctor unaffected. Zero model burn (injected mission_fn fakes + echo/false only).
+- MISSION SCORE: 90/100 (OMO rung mechanism shipped: nested supervised sub-missions with depth/budget/children guards; residual is live-model child loops — her acceptance gates real runs).
+- ORACLE REVIEW (ses_f3afa3a68ffeyj9nBBlP23vfea): MERGE-WITH-NOTES. Live CLI never passes mission_fn (tony:371,444) so tags honestly BLOCKED today; kwargs keyword-only; mission tags excluded from explorer batches; boulder flip/log strictly sequential. Pre-wiring gates for the live-mission_fn slice: (1) prefix-only dispatch misses "[role:X] [mission:slug]" combos (engine.py:234 match vs resolve_role search) — silent guard bypass once wired; (2) route real child waves via waveguard.check, never submission.run_wave (drift risk); (3) tag_parse full-string anchor + whitespace-slug fallthrough to role_call (clamp to BLOCKED); (4) roles.py "depth > 2" wording off-by-one (code blocks at depth>=2). Resume re-dispatch stacks BLOCKED suffixes (pre-existing pattern, acceptable).
+
+## P39 — oracle gates for sub-missions (2026-09-21, autonomy)
+- Scope: address the 4 pre-wiring gates flagged by P38 oracle review: (1) combo-tag dispatch bypass via search(), (2) route run_wave through waveguard.check to eliminate submission._is_hostile drift, (3) clamp malformed/whitespace mission tags to BLOCKED instead of falling through to role_call, (4) fix doctrine wording to depth >= 2.
+- RED: 5 pins (combo bypass, combo children count, doctrine wording, duplicate _is_hostile, waveguard routing bypass). GREEN: 305/305 (296 prior unmodified + 9 new). test_p39_oracle_gates.py renamed to test_mission_tag_guards.py to respect P20 naming convention.
+- ruff 0, mypy 0 (29 files), keyless 0.
+- SURFACE LIVE: CLI unchanged (mission_fn not yet passed).
+- MISSION SCORE: 90/100 (hardening complete; next slice is live CLI wiring).
+
+## P40 — CLI mission_fn wiring (2026-09-22, autonomy)
+- Scope: wire the lib.submission machinery live into the tony CLI so that [mission:] tags actually execute as nested sub-missions.
+- Implementation: defined _run_sub_mission within tony which orchestrates a headless, pre-approved sub-mission and returns {"score": int, "wave_green": bool, "summary": str}. Passed to eng.run_loop in cmd_mission and cmd_resume.
+- GREEN: 305/305. ruff 0, mypy 0, keyless 0.
+- SURFACE LIVE: successfully executed a deep e2e test via opencode where a depth 1 sub-mission orchestrated a depth 2 sub-mission and aggregated scores cleanly back up.
+- MISSION SCORE: 90/100 (sub-missions are fully active in the agent CLI).
+
