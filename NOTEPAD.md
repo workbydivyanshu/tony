@@ -655,3 +655,10 @@ PASS=0 FAIL=1
 - Recovery: git checkout HEAD -- . + rm 7 restored test_p*.py strays; suite 281/281 green; all commits intact; zero loss. Vendored dirs left on disk untouched (possibly her clone; ignored).
 - Prevention (self-imposed): every future delegation prompt carries explicit MUST NOT DO (no git/archive/tar/cp/restore commands, read-only means read-only); tree-clean check after EVERY delegation return, not just at commit.
 - Open: concurrent-writer risk in ~/tony stands (no locking). If it recurs, add a tripwire.
+
+## BRANCH LAW (2026-09-21, Vianca's standing order)
+- Whichever AI works here pushes to work/<slug>, never master. Master advances
+  only by her reviewed merge (--no-ff) + push. No agent merges/pushes master,
+  never tags. Why: off-device copies are the restore path (02:40 proved
+  local-only work can vanish). AGENTS.md carries the enforceable version.
+- First push under this law: work/night-2026-09-21 (H1+P29-P32+T1, 9 commits).
