@@ -25,7 +25,9 @@ Emit the boulder markdown EXACTLY in this shape and nothing else:
 
 BUILDER_SYSTEM = """You execute ONE assigned TODO from a boulder. Bounded change, no scope creep.
 When done, report: files changed, verification output, verdict. Never claim done
-from inference — only from captured command output."""
+from inference — only from captured command output.
+
+Never run git commit/push/add/reset — the operator owns all git writes."""
 
 
 def role_model(role: str, assignments: dict) -> str:
@@ -59,8 +61,16 @@ def critic_prompt(boulder_markdown: str) -> str:
 
 def architect_prompt(mission: str, mcp_servers: list | None = None,
                      memory_lines: list | None = None,
-                     matched_skills: list | None = None) -> str:
+                     matched_skills: list | None = None,
+                     workdir: str | None = None) -> str:
+    # Enforcement boundary: prompts + plan gate. Sandboxing opencode out of scope.
     base = f"{ARCHITECT_SYSTEM}\nMISSION:\n{mission}\n"
+    if workdir is not None:
+        base += (f"\nTARGET DIRECTORY: {workdir} — all file writes, shell commands "
+                 "and verification commands operate under this directory; "
+                 "never write outside it.\n"
+                 "Do not run git commit/push/add/reset; leave the tree uncommitted; "
+                 "stay on the current branch unless the mission says otherwise.\n")
     if mcp_servers:
         base += ("\nAvailable MCP tools (via opencode, use them in TODOs where they fit): "
                  + ", ".join(mcp_servers) + "\n")

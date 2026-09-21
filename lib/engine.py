@@ -187,7 +187,8 @@ def role_call(role: str, model: str, subtask: str, workdir: str,
     for attempt in range(max_tries):
         try:
             proc = run([resolve_bin(opencode_bin), "run", "--model", model, subtask],
-                       capture_output=True, text=True, timeout=timeout)
+                       capture_output=True, text=True, timeout=timeout,
+                       cwd=workdir)
             ok = proc.returncode == 0
             output = (proc.stdout or "") + (proc.stderr or "")
         except Exception as e:  # runner exploded (timeout, missing binary)

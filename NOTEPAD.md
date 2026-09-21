@@ -662,3 +662,16 @@ PASS=0 FAIL=1
   never tags. Why: off-device copies are the restore path (02:40 proved
   local-only work can vanish). AGENTS.md carries the enforceable version.
 - First push under this law: work/night-2026-09-21 (H1+P29-P32+T1, 9 commits).
+
+## P34 Wave 1 — workdir seam + prompt doctrine (takeover)
+- Delegates delivered then hung (cancelled bg_76d5e2ed/bg_3101f268, standing pattern). Takeover found 3 REAL defects: (1) architect_prompt workdir inserted at position 2 broke tony:351 positional caller (mypy caught); fixed by moving workdir to END (spec was keyword-only, safe). (2) workdir.DEFAULT_ROOT at import time (violates call-time-HOME rule); fixed with _default_root(). (3) is_foreign prefix bug (~/.tony/work-evil counted local); fixed via commonpath + live proof.
+- GREEN: 294/294 (284 + 5 + 5). ruff 0, mypy 0 (29 files).
+- T3 GREEN (delegate): --workdir threaded (mission/resume/research/chat/watch + gate warning); 301/301.
+
+## P34 — foreign-repo workdir (OpenCode rung, 2026-09-21)
+- Wave 1 (delegates hung, took over): lib/workdir.py resolve()/is_foreign() + roles.py architect workdir-injection + BUILDER git doctrine. Takeover fixed 3 defects (positional-break, import-time HOME, prefix traversal).
+- Wave 2-3 (delegate, verified hunk-by-hunk): --workdir threaded (mission/resume/research/chat/watch + gate warning); research wave via eng.run_wave.
+- LIVE FIND (foreign mission /tmp/p34-foreign): hello.txt 5B exact, 3/3 TODOs, 1/1 wave, 80/100; outfiles in foreign, boulder+report global, git log empty (doctrine held); BUT stray hello.txt landed in ~/tony — role_call subprocess had no cwd (P24 fixed waves, never builds). Fixed: cwd=workdir (makedirs :182 covers) + pin. Residue removed.
+- Live proof: gate-ON default in non-TTY proceeds via headless-skip log (TTy-hold covered by plangate pins); foreign+yes warning wired.
+- GREEN: 305/305. ruff 0, mypy 0 (29 files), keyless 0. --selftest 4/4, doctor 10/10, 7 models live.
+- MISSION SCORE: 90/100 (Tony runs coding missions in foreign repos with ledger staying home; residual: builder-shell enforcement is doctrine-only, declared).
