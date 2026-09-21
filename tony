@@ -373,6 +373,9 @@ def _run_sub_mission(prompt: str, slug: str, child_timeout: int, depth: int) -> 
                             "Fix these failing verification steps, then stop:\n" +
                             "\n".join(fails), workdir, timeout=child_timeout)
         boulder.log(b, f"builder fix: {fix['status']}")
+        if fix['status'] != "ok":
+            boulder.log(b, "builder fix FAILED; running wave anyway (bypass)")
+        return fix['status']
 
     eng.run_loop(b, tier_models, workdir, parallel=False,
                  sleep_fn=time.sleep, timeout=child_timeout,
@@ -502,6 +505,9 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
                             "Fix these failing verification steps, then stop:\n" +
                             "\n".join(fails), workdir, timeout=timeout)
         boulder.log(b, f"builder fix: {fix['status']}")
+        if fix['status'] != "ok":
+            boulder.log(b, "builder fix FAILED; running wave anyway (bypass)")
+        return fix['status']
 
     gate = "N/A"
     evidence = None
@@ -567,6 +573,9 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
                             "Fix these failing verification steps, then stop:\n" +
                             "\n".join(fails), workdir, timeout=timeout)
         boulder.log(b, f"builder fix: {fix['status']}")
+        if fix['status'] != "ok":
+            boulder.log(b, "builder fix FAILED; running wave anyway (bypass)")
+        return fix['status']
 
     eng.run_loop(b, tier_models, workdir, parallel=parallel,
                  sleep_fn=time.sleep, timeout=timeout,

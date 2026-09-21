@@ -740,3 +740,8 @@ PASS=0 FAIL=1
 - RED: 2 pins. GREEN: 338/338 (336 prior unmodified + 2 new). ruff 0, mypy 0 (31 files), keyless 0.
 - SURFACE LIVE: successfully halts and prompts the user on TTY, aborts on headless, and proceeds with planned boulder on the subsequent try.
 - MISSION SCORE: 100/100 (Cline rung fully shipped: recon-first planning + interactive clarification).
+## P22 — builder fix explicit bypass log (autonomy)
+- Scope: ISSUES → builder fix FAILED → wave still runs but log previously omitted an explicit override line. Wave-after-failed-fix must log the bypass explicitly.
+- Implementation: patched _builder_fix closures in `tony` to check `fix['status'] != 'ok'` and emit an explicit bypass log line.
+- RED: manual pin. GREEN: 338/338 (0 new).
+- MISSION SCORE: 100/100.
