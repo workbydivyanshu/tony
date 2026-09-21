@@ -326,6 +326,82 @@ def cmd_research(topic: str, timeout: int = 900) -> int:
     return 0
 
 
+
+def _run_sub_mission(prompt: str, slug: str, child_timeout: int, depth: int) -> dict:
+    from lib import engine as eng
+    from lib import plangate as gate_mod
+    from lib import report as rep
+    from lib import submission as sub
+
+    models = catalog.live_catalog()
+    overrides = config.get_roles() or None
+    raw = tiers.assign_roles_with_sources(models, overrides)
+    assignments = {r: (v["model"] if isinstance(v, dict) else v) for r, v in raw.items()}
+    workdir = os.path.join(os.path.expanduser("~"), ".tony", "work", slug)
+
+    print(f"tony [depth {depth}]: sub-mission '{prompt[:80]}' -> slug {slug}")
+    arch = eng.role_call("architect", assignments["architect"],
+                         roles.architect_prompt(prompt, mcp.names(),
+                                                mem_mod.recall(limit=20),
+                                                matched_skills=_matched_skills(prompt)), workdir,
+                         timeout=child_timeout)
+    if arch["status"] != "ok":
+        print(f"tony [depth {depth}]: architect failed")
+        return {"score": 0, "wave_green": False, "summary": "architect failed"}
+
+    clean = eng.sanitize(arch["output"])
+    b = boulder.parse(clean) if "# Boulder" in clean else boulder.new(slug)
+    if not b["todos"]:
+        boulder.add_todo(b, clean[:400])
+    boulder.log(b, f"sub-mission started: {prompt[:120]} (depth {depth})")
+
+    # Headless pre-approved for sub-missions
+    gate_mod.confirm_plan(b, is_tty=False, pre_approved=True)
+
+    tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
+
+    def _builder_fix(fails):
+        fix = eng.role_call("builder", assignments["builder"],
+                            "Fix these failing verification steps, then stop:\n" +
+                            "\n".join(fails), workdir, timeout=child_timeout)
+        boulder.log(b, f"builder fix: {fix['status']}")
+
+    eng.run_loop(b, tier_models, workdir, parallel=False,
+                 sleep_fn=time.sleep, timeout=child_timeout,
+                 depth=depth, mission_fn=_run_sub_mission, max_children=3)
+
+    gate = "N/A"
+    evidence = None
+    fix_status = "none"
+    if len(b["todos"]) >= 2:
+        crit_prompt = roles.critic_prompt(boulder.render(b))
+        crit = eng.role_call("critic", assignments["critic"], crit_prompt, workdir,
+                             timeout=child_timeout)
+        boulder.log(b, f"critic ({assignments['critic']}): {crit['output'][:300]}")
+        gate_detail, _strong = eng.critic_gate_detail(crit["output"])
+        evidence = eng.evidence_coverage(crit["output"], b["todos"])
+        gate, fix_status = eng.apply_critic_gate(b, gate_detail, False,
+                                                 fix_fn=_builder_fix,
+                                                 critic_output=crit["output"])
+
+    if fix_status == "fail":
+        print(f"tony [depth {depth}]: critic gate ISSUES OVERRIDE")
+
+    eng.verify_wave(b, max_verify=3, cwd=workdir, fix_fn=_builder_fix) if eng.should_run_wave(b, False) else boulder.log(b, "wave skipped")
+    boulder.save(slug, b)
+    score = cmd_score(b, gate, evidence)
+
+    wave_green = len(b["wave"]) > 0 and all(w["box"] for w in b["wave"])
+
+    rp = rep.write(os.path.expanduser("~/.fleet/out"), slug, prompt,
+                   assignments, b, score, f"sub-mission depth {depth}; critic gate: {gate}")
+    print(f"tony [depth {depth}]: report {rp}")
+    print(f"tony [depth {depth}]: SCORE: {score}/100 — wave_green={wave_green}")
+
+    summary = sub.summarize(workdir, f"sub-mission {slug} score {score} wave {'green' if wave_green else 'red'}")
+    return {"score": score, "wave_green": wave_green, "summary": summary}
+
+
 def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
                 keep_going: bool = False, timeout: int = 600, yes: bool = False) -> int:
     """One-shot: architect plan -> boulder -> execute -> critic -> wave -> report."""
@@ -369,7 +445,8 @@ def cmd_mission(mission: str, parallel: bool = False, max_verify: int = 3,
         return 2
     tier_models = {r: tiers.pick(models, t) for r, (t, _e) in tiers.ROLES.items()}
     eng.run_loop(b, tier_models, workdir, parallel=parallel,
-                 sleep_fn=time.sleep, timeout=timeout)
+                 sleep_fn=time.sleep, timeout=timeout,
+                 mission_fn=_run_sub_mission, max_children=3)
 
     def _builder_fix(fails):
         fix = eng.role_call("builder", assignments["builder"],
@@ -442,7 +519,8 @@ def cmd_resume(slug: str, parallel: bool = False, max_verify: int = 3,
         boulder.log(b, f"builder fix: {fix['status']}")
 
     eng.run_loop(b, tier_models, workdir, parallel=parallel,
-                 sleep_fn=time.sleep, timeout=timeout)
+                 sleep_fn=time.sleep, timeout=timeout,
+                 mission_fn=_run_sub_mission, max_children=3)
     if eng.should_run_wave(b, keep_going):
         eng.verify_wave(b, max_verify=max_verify, cwd=workdir, fix_fn=_builder_fix)
     else:
